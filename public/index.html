@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>McCrew AI — Standard</title>
+  <title>McCrew AI — Standard (Interactive)</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -11,6 +11,10 @@
     <div class="brand">
       <span class="arch">M</span><span>cCrew AI</span>
     </div>
+
+    <div class="spacer"></div>
+
+    <button id="openHelp" class="ghost">Help</button>
     <button id="openAdmin" class="ghost">Admin</button>
   </header>
 
@@ -19,14 +23,14 @@
     <aside class="panel">
       <h2>Quick Actions</h2>
       <div class="quick-grid">
-        <button class="quick" data-msg="/shift">Today’s Shift</button>
-        <button class="quick" data-msg="/pay">Today’s Pay</button>
-        <button class="quick" data-msg="/nextpay">Next Paycheck</button>
-        <button class="quick" data-msg="What is the uniform policy?">Uniform Rules</button>
-        <button class="quick" data-msg="How to set up fry station?">Fry Training</button>
-        <button class="quick" data-msg="How to assemble a Big Mac?">Sandwich Build</button>
-        <button class="quick" data-msg="Safety rules for cleaning chemicals">Safety</button>
-        <button class="quick" data-msg="What is the lateness policy?">Lateness</button>
+        <button class="quick pulse" data-msg="/shift">Today’s Shift</button>
+        <button class="quick pulse" data-msg="/pay">Today’s Pay</button>
+        <button class="quick pulse" data-msg="/nextpay">Next Paycheck</button>
+        <button class="quick" data-msg="/week">This Week</button>
+        <button class="quick" data-msg="/quiz start">Training Quiz</button>
+        <button class="quick" data-msg="/break 20">Start 20-min Break</button>
+        <button class="quick" data-msg="/policy uniform">Find Policy: Uniform</button>
+        <button class="quick" data-msg="/policy allergen">Find Policy: Allergen</button>
       </div>
 
       <div class="id-card">
@@ -36,10 +40,10 @@
       </div>
 
       <div class="suggestions">
-        <span>Suggestions:</span>
+        <span>Try:</span>
         <button class="chip" data-msg="Show fryer filtering checklist">fryer checklist</button>
-        <button class="chip" data-msg="Remind me break rules">break rules</button>
-        <button class="chip" data-msg="What allergens are common?">allergens</button>
+        <button class="chip" data-msg="/swap 2025-09-10 12:00-20:00 Need to swap for appointment">request shift swap</button>
+        <button class="chip" data-msg="/swaps">view swap board</button>
       </div>
 
       <div class="kb-topics">
@@ -52,19 +56,63 @@
     <section class="chat">
       <div id="chatLog" class="chat-log">
         <div class="bot msg">
-          <p>Welcome to <b>McCrew AI</b> (Standard). I can help with rules, training, and your shift/pay info.</p>
-          <p>Try: <code>/shift</code>, <code>/pay</code>, <code>/nextpay</code>, or ask any policy question.</p>
+          <p>Welcome to <b>McCrew AI</b> (Standard). Ask me about rules, training, shifts & pay.</p>
+          <p>Commands: <code>/help</code>, <code>/shift</code>, <code>/week</code>, <code>/pay</code>, <code>/nextpay</code>, <code>/policy &lt;term&gt;</code>, <code>/quiz start</code>, <code>/break 20</code>, <code>/swap &lt;YYYY-MM-DD HH:MM-HH:MM note&gt;</code>, <code>/swaps</code>, <code>/quit</code>.</p>
         </div>
       </div>
 
       <form id="chatForm" class="chat-input">
-        <input id="chatText" placeholder="Ask about work, rules, training, or pay..." autocomplete="off" />
+        <input id="chatText" placeholder="Type /help or ask a rule… (Ctrl/⌘+K opens command palette)" autocomplete="off" />
         <button type="submit">Send</button>
       </form>
     </section>
   </main>
 
-  <!-- Admin modal -->
+  <!-- Command palette -->
+  <dialog id="helpModal">
+    <form method="dialog" class="help">
+      <header>
+        <h3>Shortcuts & Commands</h3>
+        <button value="close" class="ghost">Close</button>
+      </header>
+      <div class="grid">
+        <div>
+          <h4>Scheduling</h4>
+          <ul>
+            <li><code>/shift</code> — Today’s shift</li>
+            <li><code>/week</code> — Next 7 days</li>
+            <li><code>/swap YYYY-MM-DD 12:00-20:00 note</code> — Request swap</li>
+            <li><code>/swaps</code> — View swap board</li>
+          </ul>
+        </div>
+        <div>
+          <h4>Pay</h4>
+          <ul>
+            <li><code>/pay</code> — Today’s estimated pay</li>
+            <li><code>/nextpay</code> — Next payday</li>
+          </ul>
+        </div>
+        <div>
+          <h4>Learning</h4>
+          <ul>
+            <li><code>/policy &lt;term&gt;</code> — Search policies</li>
+            <li><code>/quiz start</code> — 5-question training quiz</li>
+            <li><code>/quit</code> — Exit quiz</li>
+          </ul>
+        </div>
+        <div>
+          <h4>Wellbeing</h4>
+          <ul>
+            <li><code>/break 20</code> — Start break timer (mins)</li>
+            <li><code>/cancelbreak</code> — Stop timer</li>
+          </ul>
+        </div>
+      </div>
+      <p class="hint">Tip: Press <b>Ctrl/⌘+K</b> to open this palette anytime.</p>
+    </form>
+  </dialog>
+
+  <!-- Admin -->
   <dialog id="adminModal">
     <form method="dialog" class="admin">
       <header>

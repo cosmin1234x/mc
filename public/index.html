@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>McCrew AI — Helper for Crew Members</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="arch">M</span><span>cCrew AI</span>
+    </div>
+    <button id="openAdmin" class="ghost">Admin</button>
+  </header>
+
+  <main class="layout">
+    <!-- Left: quick actions -->
+    <aside class="panel">
+      <h2>Quick Actions</h2>
+      <div class="quick-grid">
+        <button class="quick" data-msg="/shift">Today’s Shift</button>
+        <button class="quick" data-msg="/pay">Today’s Pay</button>
+        <button class="quick" data-msg="/nextpay">Next Paycheck</button>
+        <button class="quick" data-msg="What is the uniform policy?">Uniform Rules</button>
+        <button class="quick" data-msg="How to set up fry station?">Fry Training</button>
+        <button class="quick" data-msg="How to assemble a Big Mac?">Sandwich Build</button>
+        <button class="quick" data-msg="Safety rules for cleaning chemicals">Safety</button>
+        <button class="quick" data-msg="What is the lateness policy?">Lateness</button>
+      </div>
+
+      <div class="id-card">
+        <label for="empId">Your Employee ID</label>
+        <input id="empId" placeholder="e.g. 1234" />
+        <small>Used for shift & pay lookups (demo data).</small>
+      </div>
+
+      <div class="kb-topics">
+        <h3>Knowledge Topics</h3>
+        <ul id="kbList"></ul>
+      </div>
+    </aside>
+
+    <!-- Right: chat -->
+    <section class="chat">
+      <div id="chatLog" class="chat-log">
+        <div class="bot msg">
+          <p>Hey! I’m <b>McCrew AI</b>. I can help with rules, training, and your shift/pay info.</p>
+          <p>Try: <code>/shift</code>, <code>/pay</code>, <code>/nextpay</code>, or ask “What’s the uniform policy?”</p>
+        </div>
+      </div>
+
+      <form id="chatForm" class="chat-input">
+        <input id="chatText" placeholder="Ask me anything about work, rules, or training..." autocomplete="off" />
+        <button type="submit">Send</button>
+      </form>
+    </section>
+  </main>
+
+  <!-- Admin modal (for demo data) -->
+  <dialog id="adminModal">
+    <form method="dialog" class="admin">
+      <header>
+        <h3>Admin • Demo Data</h3>
+        <button value="close" class="ghost">Close</button>
+      </header>
+
+      <section>
+        <h4>Employees</h4>
+        <div class="row">
+          <input id="aEmpId" placeholder="ID e.g. 1234" />
+          <input id="aName" placeholder="Name e.g. Alex" />
+          <input id="aRate" type="number" step="0.01" placeholder="Hourly £ e.g. 11.50" />
+          <button id="addEmp" type="button">Add/Update</button>
+        </div>
+        <div id="empTable"></div>
+      </section>
+
+      <section>
+        <h4>Pay Period</h4>
+        <div class="row">
+          <label>Frequency</label>
+          <select id="payFreq">
+            <option value="weekly">Weekly</option>
+            <option value="biweekly">Bi-weekly</option>
+            <option value="monthly">Monthly</option>
+          </select>
+          <label>Next payday</label>
+          <input id="nextPayday" type="date" />
+          <button id="savePayConfig" type="button">Save</button>
+        </div>
+      </section>
+    </form>
+  </dialog>
+
+  <footer class="foot">
+    <small>Demo only. Replace mock data and KB with your store/company sources.</small>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>

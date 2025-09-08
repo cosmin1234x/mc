@@ -1,70 +1,131 @@
+/* ===== Playmobil Animals Theme ===== */
 :root{
-  --bg:#0f1115; --panel:#151822; --muted:#8a90a2; --text:#e9ecf1;
-  --brand:#ffc300; --accent:#ff3d00; --line:#23283a; --chip:#1c2130;
+  --bg:#0e1220;            /* deep navy */
+  --panel:#131830;
+  --muted:#97a0be;
+  --text:#f2f5ff;
+  --brand:#ffd94d;         /* sunshine */
+  --accent:#ff6b6b;        /* coral */
+  --accent-2:#4cd964;      /* grass */
+  --accent-3:#51c4ff;      /* sky */
+  --line:#232a52;
+  --chip:#171d3a;
 }
 
 *{box-sizing:border-box}
 html,body{height:100%}
 body{
-  margin:0; font:16px/1.4 system-ui,Segoe UI,Roboto,Helvetica,Arial;
-  background:radial-gradient(80vw 80vh at 20% -10%, #1b2030, #0f1115);
+  margin:0; font:16px/1.45 system-ui, Segoe UI, Roboto, Helvetica, Arial;
   color:var(--text);
+  background:
+    radial-gradient(1200px 700px at 10% -20%, #1a2150 0%, rgba(17,20,44,0) 60%),
+    radial-gradient(800px 500px at 110% 20%, #0d2a52 0%, rgba(13,42,82,0) 60%),
+    linear-gradient(180deg, #0b1023, #0f1326);
 }
 
+/* topbar */
 .topbar{
-  display:flex; align-items:center; justify-content:space-between;
-  padding:12px 18px; border-bottom:1px solid var(--line); background:#10131a;
+  display:flex; align-items:center; gap:12px;
+  padding:12px 18px; border-bottom:1px solid var(--line); background:#0b0f1e80;
+  backdrop-filter: blur(6px);
   position:sticky; top:0; z-index:10;
 }
 .brand{font-weight:800; letter-spacing:.2px; display:flex; gap:6px; align-items:center}
-.brand .arch{color:var(--brand); font-size:20px; border:2px solid var(--brand); border-radius:6px; padding:0 6px}
-.ghost{background:transparent; color:var(--muted); border:1px solid var(--line); padding:8px 12px; border-radius:10px; cursor:pointer}
-.ghost:hover{border-color:#2f3650; color:#cdd3e3}
+.brand .arch{color:#000; background:var(--brand); font-size:20px; border-radius:6px; padding:0 8px}
+.ghost{background:transparent; color:var(--muted); border:1px solid var(--line); padding:8px 12px; border-radius:12px; cursor:pointer}
+.ghost:hover{border-color:#35408a; color:#dfe6ff}
 
-.layout{display:grid; grid-template-columns:320px 1fr; gap:16px; padding:16px; max-width:1200px; margin:auto}
-.panel{
-  background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:16px;
+.toy-pill{
+  margin-left:auto; margin-right:8px;
+  display:flex; align-items:center; gap:10px;
+  padding:8px 12px; border-radius:999px;
+  border:1px dashed #2a3473; background:linear-gradient(90deg, #0f1840, #101b44);
+  font-weight:700; color:#cfe2ff;
 }
+.toy-pill span{color:var(--brand)}
+
+/* ribbon */
+.theme-ribbon{
+  overflow:hidden; border-bottom:1px solid var(--line);
+  background:linear-gradient(90deg, rgba(81,196,255,.15), rgba(76,217,100,.15));
+}
+.theme-ribbon .ribbon-inner{
+  display:flex; gap:22px; align-items:center;
+  padding:10px 16px; white-space:nowrap; animation:scroll 22s linear infinite;
+  font-size:18px;
+}
+.theme-ribbon .txt{margin:0 8px; font-weight:800; color:#fff}
+@keyframes scroll{ from{ transform:translateX(0)} to{ transform:translateX(-50%) } }
+
+/* layout */
+.layout{display:grid; grid-template-columns:340px 1fr; gap:16px; padding:16px; max-width:1200px; margin:auto}
+.panel,.chat{
+  background:var(--panel); border:1px solid var(--line); border-radius:20px; position:relative;
+}
+.sticker{box-shadow: 0 10px 30px rgba(0,0,0,.25)}
+.panel{padding:16px}
 .panel h2{margin:0 0 10px 0}
-.quick-grid{display:grid; grid-template-columns:1fr 1fr; gap:8px}
+
+.quick-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px}
 .quick{
-  border:1px solid var(--line); background:var(--chip); color:var(--text);
-  border-radius:12px; padding:10px; cursor:pointer; text-align:left
+  border:2px dashed #2a3473; background:var(--chip); color:var(--text);
+  border-radius:16px; padding:12px; cursor:pointer; text-align:left; font-weight:700;
+  transition: transform .06s ease, box-shadow .06s ease;
 }
-.quick:hover{border-color:#2f3650}
+.quick:hover{transform:translateY(-1px)}
+.quick:active{transform:translateY(0)}
+.quick::after{
+  content:""; display:block; height:4px; border-radius:4px; margin-top:8px;
+  background:linear-gradient(90deg, var(--brand), var(--accent), var(--accent-3), var(--accent-2));
+  opacity:.35;
+}
+
 .id-card{margin-top:14px; display:grid; gap:6px}
 .id-card input{
-  padding:10px; border-radius:10px; border:1px solid var(--line); background:#0f1320; color:var(--text)
+  padding:12px; border-radius:12px; border:1px solid var(--line); background:#0f1430; color:var(--text)
 }
+
 .kb-topics{margin-top:18px}
-.kb-topics ul{list-style:none; padding:0; margin:8px 0 0 0; display:grid; gap:6px}
-.kb-topics li{border:1px solid var(--line); background:var(--chip); padding:8px 10px; border-radius:10px; font-size:14px}
-
-.chat{
-  background:var(--panel); border:1px solid var(--line); border-radius:16px; display:flex; flex-direction:column;
+.kb-topics ul{list-style:none; padding:0; margin:8px 0 0 0; display:grid; gap:8px}
+.kb-topics li{
+  border:1px solid var(--line); background:#10173a; padding:10px 12px; border-radius:12px; font-size:14px;
 }
-.chat-log{padding:16px; display:flex; flex-direction:column; gap:10px; overflow:auto; max-height:70vh}
-.msg{max-width:80%; padding:10px 12px; border-radius:12px; border:1px solid var(--line)}
-.bot{background:#12162a}
-.user{background:#0d1424; margin-left:auto}
-.msg p{margin:.3em 0}
-.msg code{background:#101628; padding:2px 6px; border-radius:6px; border:1px solid #222845}
 
+/* chat */
+.chat{display:flex; flex-direction:column;}
+.chat-log{padding:16px; display:flex; flex-direction:column; gap:10px; overflow:auto; max-height:70vh}
+.msg{max-width:80%; padding:12px 14px; border-radius:14px; border:1px solid var(--line)}
+.bot{background:#0e1636}
+.user{background:#0b1430; margin-left:auto}
+.msg p{margin:.35em 0}
+.msg code{background:#0a1430; padding:2px 6px; border-radius:6px; border:1px solid #1b2660}
+.tiny-pill{display:inline-block; padding:2px 8px; border-radius:999px; margin-left:6px; background:linear-gradient(90deg,var(--brand),var(--accent)); color:#000; font-weight:900}
+
+/* chat input */
 .chat-input{display:flex; gap:8px; padding:12px; border-top:1px solid var(--line)}
 .chat-input input{
-  flex:1; padding:12px; border-radius:12px; border:1px solid var(--line); background:#0f1320; color:var(--text)
+  flex:1; padding:12px; border-radius:12px; border:1px solid var(--line); background:#0f1430; color:var(--text)
 }
 .chat-input button{
-  padding:12px 16px; border-radius:12px; border:0; background:linear-gradient(90deg,var(--brand),var(--accent)); color:#000; font-weight:700; cursor:pointer
+  padding:12px 16px; border-radius:12px; border:0; background:linear-gradient(90deg,var(--brand),var(--accent-3)); color:#000; font-weight:800; cursor:pointer
 }
 
+/* corner stickers */
+.corner-sticker{
+  position:fixed; z-index:0; font-size:46px; opacity:.25; filter:drop-shadow(0 4px 10px rgba(0,0,0,.25));
+  user-select:none; pointer-events:none;
+}
+.corner-sticker.tl{top:8px; left:8px; transform:rotate(-12deg)}
+.corner-sticker.br{bottom:12px; right:12px; transform:rotate(10deg)}
+
+/* admin modal */
 dialog::backdrop{background:rgba(0,0,0,.45)}
-.admin{min-width:720px; background:#0f1320; border:1px solid var(--line); border-radius:14px; padding:0}
+.admin{min-width:720px; background:#0f1430; border:1px solid var(--line); border-radius:14px; padding:0}
 .admin header{display:flex; justify-content:space-between; align-items:center; padding:12px 16px; border-bottom:1px solid var(--line)}
-.admin section{padding:12px 16px; border-top:1px dashed #222845}
+.admin section{padding:12px 16px; border-top:1px dashed #2a3473}
 .row{display:flex; gap:8px; flex-wrap:wrap}
-.row input, .row select{padding:10px; border-radius:10px; border:1px solid var(--line); background:#12162a; color:var(--text)}
-.row button{padding:10px 14px; border-radius:10px; border:1px solid var(--line); background:#1a2034; color:var(--text); cursor:pointer}
+.row input, .row select{padding:10px; border-radius:10px; border:1px solid var(--line); background:#10173a; color:var(--text)}
+.row button{padding:10px 14px; border-radius:10px; border:1px solid var(--line); background:#162050; color:var(--text); cursor:pointer}
 #empTable{margin-top:10px; border:1px solid var(--line); border-radius:10px; overflow:hidden}
 #empTable table{width:100%; border-collapse:collapse}
 #empTable th, #empTable td{border-bottom:1px solid var(--line); padding:8px 10px; text-align:left}

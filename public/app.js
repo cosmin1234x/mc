@@ -1,11 +1,10 @@
 /* =========================
-   McCrew AI (Client-side demo)
+   McCrew AI (Playmobil Animals Edition)
    ========================= */
 
 // --- Demo Data (edit or replace with real API/DB) ---
 const store = {
   employees: [
-    // id, name, hourlyRate, plannedShifts: [{date:'YYYY-MM-DD', start:'HH:MM', end:'HH:MM'}]
     { id: "1234", name: "Alex", hourlyRate: 11.5, plannedShifts: [
       { date: offsetDate(0), start:"09:00", end:"17:00" },
       { date: offsetDate(1), start:"12:00", end:"20:00" },
@@ -20,6 +19,8 @@ const store = {
 
 // Knowledge Base — short, editable items
 const KB = [
+  { topic: "Happy Meal — Playmobil Animals", keywords:["happy meal","toy","playmobil","animals"], answer:
+    `• Promo toys: Playmobil Animals (availability varies by store/region).\n• Keep toys & inserts tidy in the designated storage; rotate by current week.\n• If asked about toy choice/exchanges, follow store policy and manager guidance.\n• Always hand out the correct toy safely; remove any loose packaging hazards.\n• For any complaints or shortages, escalate to a manager.` },
   { topic: "Uniform Policy", keywords:["uniform","dress","appearance"], answer:
     `• Clean full uniform, name badge visible.\n• No smart watches/rings by food prep.\n• Hair tied, beard nets where required.\n• Black, non-slip shoes.\n• Follow local store/brand standards.` },
   { topic: "Lateness Policy", keywords:["late","lateness","timekeeping"], answer:
@@ -61,7 +62,7 @@ function paydayAfter(dateISO, freq){
   return d.toISOString().slice(0,10);
 }
 
-// Persist demo data (optional)
+// Persist demo data
 const LS_KEY = "mccrew_ai_demo";
 (function loadFromLS(){
   const raw = localStorage.getItem(LS_KEY);
@@ -120,7 +121,7 @@ adminModal.addEventListener("close", ()=>saveToLS());
 addEmpBtn.addEventListener("click", ()=>{
   const id = aEmpId.value.trim(); if(!id) return;
   const name = aName.value.trim() || `Crew ${id}`;
-  const rate = parseFloat(aRate.value||"0") || 11.44; // UK NMW/nearby demo
+  const rate = parseFloat(aRate.value||"0") || 11.44; // demo default
   const existing = store.employees.find(e=>e.id===id);
   if(existing){ existing.name=name; existing.hourlyRate=rate; }
   else store.employees.push({ id, name, hourlyRate: rate, plannedShifts: [] });
@@ -183,7 +184,7 @@ function escapeHtml(s){ return s.replace(/[&<>"']/g, m=>({ "&":"&amp;","<":"&lt;
 function handleMessage(raw){
   const text = raw.toLowerCase();
 
-  // Slash commands (use ID from input if none provided)
+  // Slash commands
   if (text.startsWith("/shift"))    return handleShift();
   if (text.startsWith("/pay"))      return handleTodayPay();
   if (text.startsWith("/nextpay"))  return handleNextPay();
@@ -191,7 +192,7 @@ function handleMessage(raw){
   // If user included an ID like "/shift 1234"
   const idInMsg = (raw.match(/\b\d{3,6}\b/g)||[])[0] || "";
 
-  // Heuristics for intents
+  // Intents
   if (contains(text,["shift","rota","schedule"])) {
     return handleShift(idInMsg);
   }
@@ -202,17 +203,17 @@ function handleMessage(raw){
     return handleNextPay();
   }
 
-  // Knowledge Base match by keywords
+  // Knowledge Base match
   const kb = KB.find(k=>k.keywords.some(kw=>text.includes(kw)));
   if (kb) return answerHTML(`<p><b>${kb.topic}</b></p><p>${escapeHtml(kb.answer).replace(/\n/g,"<br>")}</p>`);
 
-  // Fallback small talk / guidance
+  // Fallback
   return answerHTML(`<p>I can help with:</p>
   <ul>
     <li><code>/shift</code> – see today’s shift</li>
     <li><code>/pay</code> – estimate today’s pay</li>
     <li><code>/nextpay</code> – next paycheck date</li>
-    <li>Ask: “What is the uniform policy?”, “How to set up fry station?”</li>
+    <li>Ask: “Happy Meal — Playmobil Animals”, “uniform policy”, “fry station setup”</li>
   </ul>`);
 }
 function contains(text, arr){ return arr.some(a=>text.includes(a)); }
@@ -247,10 +248,7 @@ function handleTodayPay(idMaybe){
   const durMin = toMinutes(shift.end)-toMinutes(shift.start);
   const hours = durMin/60;
   const base = hours * emp.hourlyRate;
-
-  // Simple demo uplift for night premium (after 22:00) – extremely simplified
-  const nightPremium = shift.end >= "22:00" ? 0.5 * hours : 0;
-
+  const nightPremium = shift.end >= "22:00" ? 0.5 * hours : 0; // demo only
   const est = base + nightPremium;
   answerHTML(`<p><b>Estimated Pay for Today</b></p>
     <p>${emp.name}: £${est.toFixed(2)} (rate £${emp.hourlyRate.toFixed(2)}/hr, ${hours.toFixed(2)} hrs)</p>
@@ -262,11 +260,8 @@ function handleNextPay(){
   const today = todayISO();
   let next = nextPayday;
   if (today > nextPayday){
-    // roll forward until in the future
     let tmp = nextPayday;
-    while (tmp <= today){
-      tmp = paydayAfter(tmp, frequency);
-    }
+    while (tmp <= today){ tmp = paydayAfter(tmp, frequency); }
     next = tmp;
     store.payConfig.nextPayday = next; saveToLS();
   }
@@ -276,11 +271,7 @@ function handleNextPay(){
     <p>Following payday: ${after}</p>`);
 }
 
-// --- Integration Guidance (displayed on / first time?) ---
-notify(`Tip: you can wire this to real data by replacing the demo functions with:
-• Your scheduling API (7shifts, Deputy, etc.)
-• A Google Sheet (use Netlify Functions / simple API)
-• Your payroll system’s read-only endpoints
-`);
+// Tip shown once
+notify(`Theme set to Playmobil Animals. Need different art or colors? I can tweak fast.`);
 
 // --- End ---

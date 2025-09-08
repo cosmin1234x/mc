@@ -1,424 +1,428 @@
-/* =========================
-   McCrew AI — Standard (Interactive)
-   ========================= */
+/* McCrew AI — Standard (Interactive) • DOM-safe + quiz-safe */
 
-/* ---- Demo Data (edit/replace with real API) ---- */
-const store = {
-  employees: [
-    { id: "1234", name: "Alex", hourlyRate: 11.5, plannedShifts: [
-      { date: offsetDate(0), start:"09:00", end:"17:00" },
-      { date: offsetDate(2), start:"12:00", end:"20:00" },
-    ]},
-    { id: "5678", name: "Sam", hourlyRate: 12.1, plannedShifts: [
-      { date: offsetDate(0), start:"17:00", end:"23:00" },
-      { date: offsetDate(3), start:"08:00", end:"16:00" },
-    ]},
-  ],
-  payConfig: { frequency: "biweekly", nextPayday: nextFridayISO() },
-  swaps: [] // {id,date,range,note,createdISO}
-};
+document.addEventListener("DOMContentLoaded", () => {
+  /* ---- Quiz FIRST (avoid TDZ) ---- */
+  let quiz = null; // {idx, score, active}
+  const QUIZ_QUESTIONS = [
+    { q:"How long should proper handwashing take?", a:["At least 10s","At least 20s","Until hands feel dry"], correct:1 },
+    { q:"What do you do if a guest asks about allergens?", a:["Guess from memory","Use official allergen charts","Say everything is gluten-free"], correct:1 },
+    { q:"Which shoes are acceptable?", a:["White trainers","Black non-slip","Open sandals"], correct:1 },
+    { q:"What happens after 3 lateness events in a period?", a:["Nothing","Review triggered","Immediate termination"], correct:1 },
+    { q:"When filtering fryers, you should…", a:["Mix any chemicals","Wear PPE and follow spec","Skip logging"], correct:1 },
+  ];
 
-// Knowledge Base — expanded
-const KB = [
-  { topic:"Uniform Policy", keywords:["uniform","dress","appearance"], answer:
-    `• Clean full uniform, name badge visible.
+  /* ---- Demo Data ---- */
+  const store = {
+    employees: [
+      { id: "1234", name: "Alex", hourlyRate: 11.5, plannedShifts: [
+        { date: offsetDate(0), start:"09:00", end:"17:00" },
+        { date: offsetDate(2), start:"12:00", end:"20:00" },
+      ]},
+      { id: "5678", name: "Sam", hourlyRate: 12.1, plannedShifts: [
+        { date: offsetDate(0), start:"17:00", end:"23:00" },
+        { date: offsetDate(3), start:"08:00", end:"16:00" },
+      ]},
+    ],
+    payConfig: { frequency: "biweekly", nextPayday: nextFridayISO() },
+    swaps: []
+  };
+
+  /* ---- KB ---- */
+  const KB = [
+    { topic:"Uniform Policy", keywords:["uniform","dress","appearance"], answer:
+      `• Clean full uniform, name badge visible.
 • No smart watches/rings by food prep.
 • Hair tied, beard nets where required.
 • Black, non-slip shoes.
 • Follow local store/brand standards.` },
-  { topic:"Lateness Policy", keywords:["late","lateness","timekeeping"], answer:
-    `• Call the store/manager ASAP if running late.
+    { topic:"Lateness Policy", keywords:["late","lateness","timekeeping"], answer:
+      `• Call the store/manager ASAP if running late.
 • Arrivals >5 min late may be logged.
 • 3 lateness events in a period triggers a review.
 • Repeated issues may affect scheduling.` },
-  { topic:"Breaks", keywords:["break","rest","meal"], answer:
-    `• UK guidance: 20-min uninterrupted break if working >6 hours.
+    { topic:"Breaks", keywords:["break","rest","meal"], answer:
+      `• UK guidance: 20-min uninterrupted break if working >6 hours.
 • Ask a manager to schedule the break considering rush periods.
 • No eating in customer area while on duty.` },
-  { topic:"Food Safety / Allergens", keywords:["allergen","safety","food","ccp"], answer:
-    `• Strict handwashing between tasks.
+    { topic:"Food Safety / Allergens", keywords:["allergen","safety","food","ccp"], answer:
+      `• Strict handwashing between tasks.
 • Keep raw/ready-to-eat separate.
 • Label and hold times must be followed.
 • Use official allergen charts; confirm with manager.` },
-  { topic:"Cleaning Chemicals", keywords:["chemical","clean","safety","msds"], answer:
-    `• Wear PPE. Never mix chemicals.
+    { topic:"Cleaning Chemicals", keywords:["chemical","clean","safety","msds"], answer:
+      `• Wear PPE. Never mix chemicals.
 • Follow dilution/soak times on label.
 • Store securely; report spills immediately.` },
-  { topic:"Fry Station — Setup", keywords:["fry","fries","vat","setup"], answer:
-    `• Check oil level & temperature (per spec).
+    { topic:"Fry Station — Setup", keywords:["fry","fries","vat","setup"], answer:
+      `• Check oil level & temperature (per spec).
 • Skim oil, insert baskets, confirm timers.
 • Correct cook times & salting procedure.
 • Filter per schedule; record in log.` },
-  { topic:"Sandwich Build — Big Mac", keywords:["big mac","build","assemble","burger"], answer:
-    `• Toast 3-part bun; sauce + onions + lettuce; cheese + patty on heel; club + sauce + lettuce + pickles; top patty; crown. Wrap per spec.` },
-  { topic:"Handwashing Steps", keywords:["handwash","wash","hygiene"], answer:
-    `• Wet → Soap → Palm to palm → Backs of hands → Between fingers → Thumbs → Fingertips → Rinse → Dry. 20 seconds minimum.` },
-  { topic:"Drive-Thru Etiquette", keywords:["drive thru","headset","order","etiquette"], answer:
-    `• Greet within 3s, speak clearly, confirm order, repeat totals.
+    { topic:"Sandwich Build — Big Mac", keywords:["big mac","build","assemble","burger"], answer:
+      `• Toast 3-part bun; sauce + onions + lettuce; cheese + patty on heel; club + sauce + lettuce + pickles; top patty; crown. Wrap per spec.` },
+    { topic:"Handwashing Steps", keywords:["handwash","wash","hygiene"], answer:
+      `• Wet → Soap → Palm to palm → Backs of hands → Between fingers → Thumbs → Fingertips → Rinse → Dry. 20 seconds minimum.` },
+    { topic:"Drive-Thru Etiquette", keywords:["drive thru","headset","order","etiquette"], answer:
+      `• Greet within 3s, speak clearly, confirm order, repeat totals.
 • Mute headset when not serving. Always say thank you.` },
-  { topic:"Coffee Machine Cleaning", keywords:["coffee","machine","clean"], answer:
-    `• Purge steam wand, run cleaning cycle, soak parts as per spec, log completion.` },
-];
+    { topic:"Coffee Machine Cleaning", keywords:["coffee","machine","clean"], answer:
+      `• Purge steam wand, run cleaning cycle, soak parts as per spec, log completion.` },
+  ];
 
-/* ---- Utils ---- */
-function todayISO(){ return new Date().toISOString().slice(0,10); }
-function offsetDate(days){ const d = new Date(); d.setDate(d.getDate()+days); return d.toISOString().slice(0,10); }
-function toMinutes(hhmm){ const [h,m]=hhmm.split(":").map(Number); return h*60+m; }
-function minutesToHrs(min){ return (min/60).toFixed(2); }
-function nextFridayISO(){ const d=new Date(); const day=d.getDay(); const add=(5-day+7)%7||7; d.setDate(d.getDate()+add); return d.toISOString().slice(0,10); }
-function paydayAfter(dateISO, freq){
-  const d = new Date(dateISO+"T00:00:00");
-  if (freq==="weekly") d.setDate(d.getDate()+7);
-  else if (freq==="biweekly") d.setDate(d.getDate()+14);
-  else if (freq==="monthly") d.setMonth(d.getMonth()+1);
-  return d.toISOString().slice(0,10);
-}
-function contains(text, arr){ return arr.some(a=>text.includes(a)); }
-function clamp(n,min,max){ return Math.max(min, Math.min(max,n)); }
+  /* ---- Utils ---- */
+  function todayISO(){ return new Date().toISOString().slice(0,10); }
+  function offsetDate(days){ const d = new Date(); d.setDate(d.getDate()+days); return d.toISOString().slice(0,10); }
+  function toMinutes(hhmm){ const [h,m]=hhmm.split(":").map(Number); return h*60+m; }
+  function minutesToHrs(min){ return (min/60).toFixed(2); }
+  function nextFridayISO(){ const d=new Date(); const day=d.getDay(); const add=(5-day+7)%7||7; d.setDate(d.getDate()+add); return d.toISOString().slice(0,10); }
+  function paydayAfter(dateISO, freq){
+    const d = new Date(dateISO+"T00:00:00");
+    if (freq==="weekly") d.setDate(d.getDate()+7);
+    else if (freq==="biweekly") d.setDate(d.getDate()+14);
+    else if (freq==="monthly") d.setMonth(d.getMonth()+1);
+    return d.toISOString().slice(0,10);
+  }
+  function contains(text, arr){ return arr.some(a=>text.includes(a)); }
+  function clamp(n,min,max){ return Math.max(min, Math.min(max,n)); }
+  const warn = (m)=>console.warn("[McCrew]", m);
 
-/* ---- Persistence ---- */
-const LS_KEY = "mccrew_ai_standard_interactive_v1";
-(function loadFromLS(){
-  try{
-    const raw = localStorage.getItem(LS_KEY);
-    if(!raw) return;
-    const data = JSON.parse(raw);
-    ["employees","payConfig","swaps"].forEach(k=>{ if(data[k]) store[k]=data[k]; });
-  }catch{}
-})();
-function saveToLS(){ localStorage.setItem(LS_KEY, JSON.stringify(store)); }
+  /* ---- Persistence ---- */
+  const LS_KEY = "mccrew_ai_standard_interactive_v1";
+  (function loadFromLS(){
+    try{
+      const raw = localStorage.getItem(LS_KEY);
+      if(!raw) return;
+      const data = JSON.parse(raw);
+      ["employees","payConfig","swaps"].forEach(k=>{ if(data[k]) store[k]=data[k]; });
+    }catch(e){ warn(e.message); }
+  })();
+  function saveToLS(){ localStorage.setItem(LS_KEY, JSON.stringify(store)); }
 
-/* ---- Elements ---- */
-const chatLog = document.getElementById("chatLog");
-const chatForm = document.getElementById("chatForm");
-const chatText = document.getElementById("chatText");
-const kbList  = document.getElementById("kbList");
-const empIdInput = document.getElementById("empId");
+  /* ---- Elements ---- */
+  const chatLog = document.getElementById("chatLog");
+  const chatForm = document.getElementById("chatForm");
+  const chatText = document.getElementById("chatText");
+  const kbList  = document.getElementById("kbList");
+  const empIdInput = document.getElementById("empId");
 
-const openAdminBtn = document.getElementById("openAdmin");
-const adminModal = document.getElementById("adminModal");
-const aEmpId = document.getElementById("aEmpId");
-const aName  = document.getElementById("aName");
-const aRate  = document.getElementById("aRate");
-const addEmpBtn = document.getElementById("addEmp");
-const empTable = document.getElementById("empTable");
-const payFreq = document.getElementById("payFreq");
-const nextPayday = document.getElementById("nextPayday");
-const savePayConfig = document.getElementById("savePayConfig");
+  const openAdminBtn = document.getElementById("openAdmin");
+  const adminModal = document.getElementById("adminModal");
+  const aEmpId = document.getElementById("aEmpId");
+  const aName  = document.getElementById("aName");
+  const aRate  = document.getElementById("aRate");
+  const addEmpBtn = document.getElementById("addEmp");
+  const empTable = document.getElementById("empTable");
+  const payFreq = document.getElementById("payFreq");
+  const nextPayday = document.getElementById("nextPayday");
+  const savePayConfig = document.getElementById("savePayConfig");
 
-const openHelpBtn = document.getElementById("openHelp");
-const helpModal = document.getElementById("helpModal");
+  const openHelpBtn = document.getElementById("openHelp");
+  const helpModal = document.getElementById("helpModal");
 
-/* ---- KB render ---- */
-KB.forEach(item=>{
-  const li = document.createElement("li");
-  li.textContent = item.topic;
-  li.addEventListener("click", ()=>{
-    pushUser(`Tell me about ${item.topic}`);
-    respondHTML(`<p><b>${item.topic}</b></p><p>${escapeHTML(item.answer).replace(/\n/g,"<br>")}</p>`);
+  /* ---- Helpers to avoid null crashes ---- */
+  const on = (el, ev, fn) => el && el.addEventListener ? el.addEventListener(ev, fn) : warn(`Skipped ${ev} on missing element`);
+  const has = (el, name) => { if(!el) warn(`Missing #${name}`); return !!el; };
+
+  /* ---- KB render ---- */
+  if (has(kbList,"kbList")){
+    KB.forEach(item=>{
+      const li = document.createElement("li");
+      li.textContent = item.topic;
+      li.addEventListener("click", ()=>{
+        pushUser(`Tell me about ${item.topic}`);
+        respondHTML(`<p><b>${item.topic}</b></p><p>${escapeHTML(item.answer).replace(/\n/g,"<br>")}</p>`);
+      });
+      kbList.appendChild(li);
+    });
+  }
+
+  /* ---- Quick buttons ripple + chips ---- */
+  document.querySelectorAll(".quick, .chip").forEach(btn=>{
+    on(btn,"click",(e)=>{
+      const r = btn.getBoundingClientRect();
+      btn.style.setProperty("--x", (e.clientX - r.left)+"px");
+      btn.style.setProperty("--y", (e.clientY - r.top)+"px");
+      handleInput(btn.dataset.msg);
+    });
   });
-  kbList.appendChild(li);
-});
 
-/* ---- Quick buttons ripple ---- */
-document.querySelectorAll(".quick, .chip").forEach(btn=>{
-  btn.addEventListener("click",(e)=>{
-    const r = btn.getBoundingClientRect();
-    btn.style.setProperty("--x", (e.clientX - r.left)+"px");
-    btn.style.setProperty("--y", (e.clientY - r.top)+"px");
-    handleInput(btn.dataset.msg);
+  /* ---- Help / palette ---- */
+  on(openHelpBtn, "click", ()=> helpModal?.showModal?.());
+  on(window, "keydown", (e)=>{
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase()==="k"){ e.preventDefault(); helpModal?.showModal?.(); }
   });
-});
 
-/* ---- Help / palette ---- */
-openHelpBtn.addEventListener("click", ()=>helpModal.showModal());
-window.addEventListener("keydown",(e)=>{
-  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase()==="k"){ e.preventDefault(); helpModal.showModal(); }
-});
+  /* ---- Admin modal ---- */
+  on(openAdminBtn,"click", ()=>{
+    adminModal?.showModal?.();
+    renderEmpTable(); initPayConfigFields();
+  });
+  on(adminModal,"close", ()=> saveToLS());
 
-/* ---- Admin modal ---- */
-openAdminBtn.addEventListener("click", ()=>{ adminModal.showModal(); renderEmpTable(); initPayConfigFields(); });
-adminModal.addEventListener("close", ()=>saveToLS());
+  on(addEmpBtn,"click", ()=>{
+    const id = (aEmpId?.value||"").trim(); if(!id) return;
+    const name = (aName?.value||"").trim() || `Crew ${id}`;
+    const rate = parseFloat(aRate?.value||"0") || 11.44;
+    const existing = store.employees.find(e=>e.id===id);
+    if(existing){ existing.name=name; existing.hourlyRate=rate; }
+    else store.employees.push({ id, name, hourlyRate: rate, plannedShifts: [] });
+    if (aEmpId) aEmpId.value=""; if (aName) aName.value=""; if (aRate) aRate.value="";
+    renderEmpTable(); saveToLS();
+  });
+  on(savePayConfig,"click", ()=>{
+    if (!payFreq) return;
+    store.payConfig.frequency = payFreq.value;
+    store.payConfig.nextPayday = (nextPayday && nextPayday.value) || store.payConfig.nextPayday;
+    respondText(`Saved pay config: ${store.payConfig.frequency}, next payday ${store.payConfig.nextPayday}`);
+    saveToLS();
+  });
+  function renderEmpTable(){
+    if (!empTable) return;
+    const rows = store.employees.map(e=>(
+      `<tr><td>${e.id}</td><td>${escapeHTML(e.name)}</td><td>£${e.hourlyRate.toFixed(2)}/hr</td><td>${e.plannedShifts?.length||0} shifts</td></tr>`
+    )).join("");
+    empTable.innerHTML = `
+      <table>
+        <thead><tr><th>ID</th><th>Name</th><th>Rate</th><th>Shifts</th></tr></thead>
+        <tbody>${rows||`<tr><td colspan="4">No employees yet</td></tr>`}</tbody>
+      </table>`;
+  }
+  function initPayConfigFields(){
+    if (payFreq) payFreq.value = store.payConfig.frequency;
+    if (nextPayday) nextPayday.value = store.payConfig.nextPayday;
+  }
 
-addEmpBtn.addEventListener("click", ()=>{
-  const id = (aEmpId.value||"").trim(); if(!id) return;
-  const name = (aName.value||"").trim() || `Crew ${id}`;
-  const rate = parseFloat(aRate.value||"0") || 11.44;
-  const existing = store.employees.find(e=>e.id===id);
-  if(existing){ existing.name=name; existing.hourlyRate=rate; }
-  else store.employees.push({ id, name, hourlyRate: rate, plannedShifts: [] });
-  aEmpId.value=aName.value=aRate.value="";
-  renderEmpTable(); saveToLS();
-});
-savePayConfig.addEventListener("click", ()=>{
-  store.payConfig.frequency = payFreq.value;
-  store.payConfig.nextPayday = nextPayday.value || store.payConfig.nextPayday;
-  respondText(`Saved pay config: ${store.payConfig.frequency}, next payday ${store.payConfig.nextPayday}`);
-  saveToLS();
-});
-function renderEmpTable(){
-  const rows = store.employees.map(e=>(
-    `<tr><td>${e.id}</td><td>${escapeHTML(e.name)}</td><td>£${e.hourlyRate.toFixed(2)}/hr</td><td>${e.plannedShifts?.length||0} shifts</td></tr>`
-  )).join("");
-  empTable.innerHTML = `
-    <table>
-      <thead><tr><th>ID</th><th>Name</th><th>Rate</th><th>Shifts</th></tr></thead>
-      <tbody>${rows||`<tr><td colspan="4">No employees yet</td></tr>`}</tbody>
-    </table>`;
-}
-function initPayConfigFields(){ payFreq.value = store.payConfig.frequency; nextPayday.value = store.payConfig.nextPayday; }
+  /* ---- Chat ---- */
+  on(chatForm,"submit",(e)=>{
+    e.preventDefault();
+    const text = (chatText?.value||"").trim(); if(!text) return;
+    handleInput(text);
+  });
+  function handleInput(text){
+    pushUser(text);
+    if (chatText) chatText.value="";
+    handleMessage(text);
+  }
+  function pushUser(text){
+    if (!chatLog) return;
+    const node = document.createElement("div");
+    node.className = "user msg";
+    node.innerHTML = `<p>${escapeHTML(text)}</p>`;
+    chatLog.appendChild(node); chatLog.scrollTop = chatLog.scrollHeight;
+  }
+  function typingBubble(){
+    if (!chatLog) return null;
+    const node = document.createElement("div");
+    node.className = "bot msg";
+    node.innerHTML = `<p class="typing"><span>Typing</span><span class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span></p>`;
+    chatLog.appendChild(node); chatLog.scrollTop = chatLog.scrollHeight;
+    return node;
+  }
+  function respondHTML(html, delay=250){
+    const bubble = typingBubble();
+    setTimeout(()=>{ if (bubble){ bubble.innerHTML = html; chatLog.scrollTop = chatLog.scrollHeight; } }, clamp(delay,0,1200));
+  }
+  function respondText(text, delay=250){
+    respondHTML(`<p>${escapeHTML(text).replace(/\n/g,"<br>")}</p>`, delay);
+  }
+  function escapeHTML(s){ return s.replace(/[&<>"']/g, m=>({ "&":"&amp;","<":"&lt;","&gt;":"&gt;","\"":"&quot;","'":"&#39;" }[m])); }
 
-/* ---- Chat ---- */
-chatForm.addEventListener("submit",(e)=>{
-  e.preventDefault();
-  const text = chatText.value.trim(); if(!text) return;
-  handleInput(text);
-});
-function handleInput(text){
-  pushUser(text);
-  chatText.value="";
-  handleMessage(text);
-}
-function pushUser(text){
-  const node = document.createElement("div");
-  node.className = "user msg";
-  node.innerHTML = `<p>${escapeHTML(text)}</p>`;
-  chatLog.appendChild(node); chatLog.scrollTop = chatLog.scrollHeight;
-}
-function typingBubble(){
-  const node = document.createElement("div");
-  node.className = "bot msg";
-  node.innerHTML = `<p class="typing"><span>Typing</span><span class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span></p>`;
-  chatLog.appendChild(node); chatLog.scrollTop = chatLog.scrollHeight;
-  return node;
-}
-function respondHTML(html, delay=250){
-  const bubble = typingBubble();
-  setTimeout(()=>{ bubble.innerHTML = html; chatLog.scrollTop = chatLog.scrollHeight; }, clamp(delay,0,1200));
-}
-function respondText(text, delay=250){
-  respondHTML(`<p>${escapeHTML(text).replace(/\n/g,"<br>")}</p>`, delay);
-}
-function escapeHTML(s){ return s.replace(/[&<>"']/g, m=>({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;" }[m])); }
+  /* ---- Break timer ---- */
+  let breakTimer = null, breakEndsAt = null;
 
-/* ---- Quiz state ---- */
-let quiz = null; // {idx, score, active}
-const QUIZ_QUESTIONS = [
-  { q:"How long should proper handwashing take?", a:["At least 10s","At least 20s","Until hands feel dry"], correct:1 },
-  { q:"What do you do if a guest asks about allergens?", a:["Guess from memory","Use official allergen charts","Say everything is gluten-free"], correct:1 },
-  { q:"Which shoes are acceptable?", a:["White trainers","Black non-slip","Open sandals"], correct:1 },
-  { q:"What happens after 3 lateness events in a period?", a:["Nothing","Review triggered","Immediate termination"], correct:1 },
-  { q:"When filtering fryers, you should…", a:["Mix any chemicals","Wear PPE and follow spec","Skip logging"], correct:1 },
-];
+  /* ---- Router ---- */
+  function handleMessage(raw){
+    const text = raw.toLowerCase();
 
-/* ---- Break timer ---- */
-let breakTimer = null; // interval id
-let breakEndsAt = null; // timestamp
-
-/* ---- Router ---- */
-function handleMessage(raw){
-  const text = raw.toLowerCase();
-
-  // Quiz answer capture
-  if (quiz?.active && !text.startsWith("/")){
-    const pick = text.trim()[0];
-    const idx = "abc123".indexOf(pick) % 3; // allow a/b/c or 1/2/3
-    if (idx>=0){
-      const curr = QUIZ_QUESTIONS[quiz.idx];
-      const ok = idx === curr.correct;
-      if (ok) quiz.score++;
-      respondHTML(`<p><b>${ok? "✅ Correct":"❌ Not quite"}</b> — ${escapeHTML(curr.a[curr.correct])}</p>`,150);
-      quiz.idx++;
-      if (quiz.idx >= QUIZ_QUESTIONS.length){
-        respondHTML(`<p><b>Quiz complete!</b> Score: ${quiz.score}/${QUIZ_QUESTIONS.length}</p>`,250);
-        quiz = null;
-      } else {
-        setTimeout(askQuizQuestion, 350);
+    // Quiz answers (quiz is already defined)
+    if (quiz && quiz.active && !text.startsWith("/")){
+      const pick = text.trim()[0]?.toLowerCase();
+      const idx = "abc123".indexOf(pick);
+      if (idx !== -1){
+        const mapped = idx % 3; // 0/1/2
+        const curr = QUIZ_QUESTIONS[quiz.idx];
+        const ok = mapped === curr.correct;
+        if (ok) quiz.score++;
+        respondHTML(`<p><b>${ok? "✅ Correct":"❌ Not quite"}</b> — ${escapeHTML(curr.a[curr.correct])}</p>`,150);
+        quiz.idx++;
+        if (quiz.idx >= QUIZ_QUESTIONS.length){
+          respondHTML(`<p><b>Quiz complete!</b> Score: ${quiz.score}/${QUIZ_QUESTIONS.length}</p>`,250);
+          quiz = null;
+        } else {
+          setTimeout(askQuizQuestion, 350);
+        }
+        return;
       }
-      return;
     }
+
+    // Commands
+    if (text.startsWith("/help"))   return showHelp();
+    if (text.startsWith("/shift"))  return handleShift();
+    if (text.startsWith("/pay"))    return handleTodayPay();
+    if (text.startsWith("/nextpay"))return handleNextPay();
+    if (text.startsWith("/week"))   return handleWeek();
+    if (text.startsWith("/policy")) return handlePolicy(raw);
+    if (text.startsWith("/quiz"))   return handleQuiz(raw);
+    if (text.startsWith("/quit"))   { quiz=null; return respondText("Exited quiz."); }
+    if (text.startsWith("/break"))  return handleBreak(raw);
+    if (text.startsWith("/cancelbreak")) return cancelBreak();
+    if (text.startsWith("/swap"))   return handleSwap(raw);
+    if (text.startsWith("/swaps"))  return listSwaps();
+
+    // Mini checklist
+    if (text.includes("fryer") && text.includes("checklist")){
+      return respondHTML(`<p><b>Fryer Filtering Checklist</b></p>
+        <ol>
+          <li>Wear PPE (gloves/apron).</li>
+          <li>Set to filter; confirm temperature & signage.</li>
+          <li>Scrape & skim, then filter per spec time.</li>
+          <li>Wipe surrounds; record in log.</li>
+        </ol>`, 250);
+    }
+
+    // KB fuzzy
+    const kb = bestKB(raw);
+    if (kb) return respondHTML(`<p><b>${kb.topic}</b></p><p>${escapeHTML(kb.answer).replace(/\n/g,"<br>")}</p>`);
+
+    // Fallback
+    showHelp();
   }
 
-  // Slash commands
-  if (text.startsWith("/help"))   return showHelp();
-  if (text.startsWith("/shift"))  return handleShift();
-  if (text.startsWith("/pay"))    return handleTodayPay();
-  if (text.startsWith("/nextpay"))return handleNextPay();
-  if (text.startsWith("/week"))   return handleWeek();
-  if (text.startsWith("/policy")) return handlePolicy(raw);
-  if (text.startsWith("/quiz"))   return handleQuiz(raw);
-  if (text.startsWith("/quit"))   { quiz=null; return respondText("Exited quiz."); }
-  if (text.startsWith("/break"))  return handleBreak(raw);
-  if (text.startsWith("/cancelbreak")) return cancelBreak();
-  if (text.startsWith("/swap"))   return handleSwap(raw);
-  if (text.startsWith("/swaps"))  return listSwaps();
+  /* ---- Handlers ---- */
+  function showHelp(){
+    respondHTML(`<p>I can help with:</p>
+    <ul>
+      <li><code>/shift</code>, <code>/week</code>, <code>/swap ...</code>, <code>/swaps</code></li>
+      <li><code>/pay</code>, <code>/nextpay</code></li>
+      <li><code>/policy &lt;term&gt;</code>, <code>/quiz start</code>, <code>/quit</code></li>
+      <li><code>/break 20</code>, <code>/cancelbreak</code></li>
+    </ul>`);
+  }
+  function findEmployee(idMaybe){
+    const id = (idMaybe || empIdInput?.value || "").trim();
+    if(!id) { respondText("Add your Employee ID first (left panel)."); return null; }
+    const emp = store.employees.find(e=>e.id===id);
+    if(!emp){ respondText(`No employee with ID ${id} in the demo data.`); return null; }
+    return emp;
+  }
+  function handleShift(idMaybe){
+    const emp = findEmployee(idMaybe); if(!emp) return;
+    const today = todayISO();
+    const shift = emp.plannedShifts?.find(s=>s.date===today);
+    if(!shift) return respondText(`${emp.name}: No shift found for today (${today}).`);
+    const durMin = toMinutes(shift.end)-toMinutes(shift.start);
+    respondHTML(`<p><b>${emp.name} — Today’s Shift</b></p>
+      <p>${shift.date} • ${shift.start}–${shift.end} (${minutesToHrs(durMin)} hrs)</p>`);
+  }
+  function handleWeek(idMaybe){
+    const emp = findEmployee(idMaybe); if(!emp) return;
+    const start = new Date(); const days = [...Array(7)].map((_,i)=>{const d=new Date(start); d.setDate(d.getDate()+i); return d.toISOString().slice(0,10);});
+    const items = days.map(d=>{
+      const s = emp.plannedShifts?.find(x=>x.date===d);
+      return `<li>${d}: ${s? `${s.start}–${s.end}` : "—"}</li>`;
+    }).join("");
+    respondHTML(`<p><b>${emp.name} — Next 7 days</b></p><ul>${items}</ul>`);
+  }
+  function handleTodayPay(idMaybe){
+    const emp = findEmployee(idMaybe); if(!emp) return;
+    const today = todayISO();
+    const shift = emp.plannedShifts?.find(s=>s.date===today);
+    if(!shift) return respondText(`${emp.name}: No shift today (${today}).`);
+    const durMin = toMinutes(shift.end)-toMinutes(shift.start);
+    const hours = durMin/60;
+    const base = hours * emp.hourlyRate;
+    const nightPremium = shift.end >= "22:00" ? 0.5 * hours : 0;
+    const est = base + nightPremium;
+    respondHTML(`<p><b>Estimated Pay for Today</b></p>
+      <p>${emp.name}: £${est.toFixed(2)} (rate £${emp.hourlyRate.toFixed(2)}/hr, ${hours.toFixed(2)} hrs)</p>
+      <small>Demo estimate only; actual pay depends on timeclock, premiums, breaks, taxes, etc.</small>`);
+  }
+  function handleNextPay(){
+    const { frequency, nextPayday } = store.payConfig;
+    const today = todayISO();
+    let next = nextPayday;
+    if (today > nextPayday){
+      let t = nextPayday; while (t <= today){ t = paydayAfter(t, frequency); }
+      next = t; store.payConfig.nextPayday = next; saveToLS();
+    }
+    const after = paydayAfter(next, frequency);
+    respondHTML(`<p><b>Next Paycheck</b></p>
+      <p>Next payday: <b>${next}</b> • Frequency: <b>${frequency}</b></p>
+      <p>Following payday: ${after}</p>`);
+  }
+  function handlePolicy(raw){
+    const term = raw.split(" ").slice(1).join(" ").trim();
+    if(!term) return respondText("Usage: /policy <term>. Example: /policy uniform");
+    const matches = rankedKB(term).slice(0,3);
+    if (!matches.length) return respondText(`No matches for “${term}”.`);
+    const html = matches.map(k=>`<li><b>${k.topic}</b> — ${escapeHTML(k.answer.split("\n")[0])}…</li>`).join("");
+    respondHTML(`<p>Top results for “${escapeHTML(term)}”:</p><ul>${html}</ul>`);
+  }
+  function handleQuiz(raw){
+    if (raw.includes("start")){
+      quiz = { idx:0, score:0, active:true };
+      respondText("Starting 5-question training quiz. Answer with A/B/C (or 1/2/3). Type /quit to exit.");
+      setTimeout(askQuizQuestion, 300);
+    } else respondText("Use: /quiz start");
+  }
+  function askQuizQuestion(){
+    if (!quiz) return;
+    const q = QUIZ_QUESTIONS[quiz.idx];
+    const letters = ["A","B","C"];
+    const list = q.a.map((t,i)=>`<li><b>${letters[i]}</b> — ${escapeHTML(t)}</li>`).join("");
+    respondHTML(`<p><b>Q${quiz.idx+1}.</b> ${escapeHTML(q.q)}</p><ul>${list}</ul>`,150);
+  }
+  function handleBreak(raw){
+    const m = parseInt(raw.split(" ")[1]||"20",10);
+    const mins = clamp(isNaN(m)?20:m, 5, 60);
+    let breakTimer = null;
+    let breakEndsAt = Date.now() + mins*60*1000;
+    const id = "breakTimer_"+Math.random().toString(36).slice(2);
+    respondHTML(`<p id="${id}"><b>Break timer:</b> ${mins}:00</p>`, 150);
+    const elUpdater = ()=> {
+      const el = document.getElementById(id); if(!el){ clearInterval(breakTimer); return; }
+      const left = Math.max(0, breakEndsAt - Date.now());
+      const mm = Math.floor(left/60000).toString().padStart(2,"0");
+      const ss = Math.floor((left%60000)/1000).toString().padStart(2,"0");
+      el.innerHTML = `<b>Break timer:</b> ${mm}:${ss}`;
+      if (left<=0){ clearInterval(breakTimer); respondText("⏰ Break finished — please return to station per policy."); }
+    };
+    breakTimer = setInterval(elUpdater, 250);
+  }
+  function cancelBreak(){ respondText("Break timer cancelled."); } // no-op version; simple demo
 
-  // Mini checklist
-  if (text.includes("fryer") && text.includes("checklist")){
-    return respondHTML(`<p><b>Fryer Filtering Checklist</b></p>
-      <ol>
-        <li>Wear PPE (gloves/apron).</li>
-        <li>Set to filter; confirm temperature & signage.</li>
-        <li>Scrape & skim, then filter per spec time.</li>
-        <li>Wipe surrounds; record in log.</li>
-      </ol>`, 250);
+  function handleSwap(raw){
+    const parts = raw.split(" ").filter(Boolean);
+    if (parts.length < 3) return respondText("Usage: /swap YYYY-MM-DD HH:MM-HH:MM Note…");
+    const date = parts[1];
+    const range = parts[2];
+    const note = parts.slice(3).join(" ") || "(no note)";
+    store.swaps.push({ id: Math.random().toString(36).slice(2), date, range, note, createdISO:new Date().toISOString() });
+    saveToLS();
+    respondHTML(`<p><b>Swap request posted</b></p><p>${date} • ${range}<br>${escapeHTML(note)}</p>`);
+  }
+  function listSwaps(){
+    if (!store.swaps.length) return respondText("No swap requests yet.");
+    const html = store.swaps.slice(-10).reverse().map(s=>`<li>${s.date} • ${s.range} — ${escapeHTML(s.note)}</li>`).join("");
+    respondHTML(`<p><b>Latest swap requests</b></p><ul>${html}</ul>`);
   }
 
-  // KB fuzzy search
-  const kb = bestKB(raw);
-  if (kb) return respondHTML(`<p><b>${kb.topic}</b></p><p>${escapeHTML(kb.answer).replace(/\n/g,"<br>")}</p>`);
-
-  // Fallback
-  showHelp();
-}
-
-/* ---- Command handlers ---- */
-function showHelp(){
-  respondHTML(`<p>I can help with:</p>
-  <ul>
-    <li><code>/shift</code>, <code>/week</code>, <code>/swap ...</code>, <code>/swaps</code></li>
-    <li><code>/pay</code>, <code>/nextpay</code></li>
-    <li><code>/policy &lt;term&gt;</code>, <code>/quiz start</code>, <code>/quit</code></li>
-    <li><code>/break 20</code>, <code>/cancelbreak</code></li>
-  </ul>`);
-}
-
-function findEmployee(idMaybe){
-  const id = (idMaybe || empIdInput.value || "").trim();
-  if(!id) { respondText("Add your Employee ID first (left panel)."); return null; }
-  const emp = store.employees.find(e=>e.id===id);
-  if(!emp){ respondText(`No employee with ID ${id} in the demo data.`); return null; }
-  return emp;
-}
-
-function handleShift(idMaybe){
-  const emp = findEmployee(idMaybe); if(!emp) return;
-  const today = todayISO();
-  const shift = emp.plannedShifts?.find(s=>s.date===today);
-  if(!shift) return respondText(`${emp.name}: No shift found for today (${today}).`);
-  const durMin = toMinutes(shift.end)-toMinutes(shift.start);
-  respondHTML(`<p><b>${emp.name} — Today’s Shift</b></p>
-    <p>${shift.date} • ${shift.start}–${shift.end} (${minutesToHrs(durMin)} hrs)</p>`);
-}
-
-function handleWeek(idMaybe){
-  const emp = findEmployee(idMaybe); if(!emp) return;
-  const start = new Date(); const days = [...Array(7)].map((_,i)=>{const d=new Date(start); d.setDate(d.getDate()+i); return d.toISOString().slice(0,10);});
-  const items = days.map(d=>{
-    const s = emp.plannedShifts?.find(x=>x.date===d);
-    return `<li>${d}: ${s? `${s.start}–${s.end}` : "—"}</li>`;
-  }).join("");
-  respondHTML(`<p><b>${emp.name} — Next 7 days</b></p><ul>${items}</ul>`);
-}
-
-function handleTodayPay(idMaybe){
-  const emp = findEmployee(idMaybe); if(!emp) return;
-  const today = todayISO();
-  const shift = emp.plannedShifts?.find(s=>s.date===today);
-  if(!shift) return respondText(`${emp.name}: No shift today (${today}).`);
-  const durMin = toMinutes(shift.end)-toMinutes(shift.start);
-  const hours = durMin/60;
-  const base = hours * emp.hourlyRate;
-  const nightPremium = shift.end >= "22:00" ? 0.5 * hours : 0; // demo
-  const est = base + nightPremium;
-  respondHTML(`<p><b>Estimated Pay for Today</b></p>
-    <p>${emp.name}: £${est.toFixed(2)} (rate £${emp.hourlyRate.toFixed(2)}/hr, ${hours.toFixed(2)} hrs)</p>
-    <small>Demo estimate only; actual pay depends on timeclock, premiums, breaks, taxes, etc.</small>`);
-}
-
-function handleNextPay(){
-  const { frequency, nextPayday } = store.payConfig;
-  const today = todayISO();
-  let next = nextPayday;
-  if (today > nextPayday){
-    let t = nextPayday; while (t <= today){ t = paydayAfter(t, frequency); }
-    next = t; store.payConfig.nextPayday = next; saveToLS();
+  /* ---- KB search ---- */
+  function scoreKB(entry, term){
+    term = term.toLowerCase();
+    let score = 0;
+    if (entry.topic.toLowerCase().includes(term)) score += 3;
+    if (entry.answer.toLowerCase().includes(term)) score += 1;
+    entry.keywords.forEach(k=>{ if (k.includes(term) || term.includes(k)) score += 2; });
+    return score;
   }
-  const after = paydayAfter(next, frequency);
-  respondHTML(`<p><b>Next Paycheck</b></p>
-    <p>Next payday: <b>${next}</b> • Frequency: <b>${frequency}</b></p>
-    <p>Following payday: ${after}</p>`);
-}
+  function rankedKB(term){ return KB.map(k=>({ ...k, _score:scoreKB(k,term)})).filter(k=>k._score>0).sort((a,b)=>b._score-a._score); }
+  function bestKB(text){
+    const term = text.trim();
+    const top = rankedKB(term)[0];
+    return top? top : null;
+  }
 
-function handlePolicy(raw){
-  const term = raw.split(" ").slice(1).join(" ").trim();
-  if(!term) return respondText("Usage: /policy <term>. Example: /policy uniform");
-  const matches = rankedKB(term).slice(0,3);
-  if (!matches.length) return respondText(`No matches for “${term}”.`);
-  const html = matches.map(k=>`<li><b>${k.topic}</b> — ${escapeHTML(k.answer.split("\n")[0])}…</li>`).join("");
-  respondHTML(`<p>Top results for “${escapeHTML(term)}”:</p><ul>${html}</ul>`);
-}
-
-function handleQuiz(raw){
-  if (raw.includes("start")){
-    quiz = { idx:0, score:0, active:true };
-    respondText("Starting 5-question training quiz. Answer with A/B/C (or 1/2/3). Type /quit to exit.");
-    setTimeout(askQuizQuestion, 300);
-  } else respondText("Use: /quiz start");
-}
-function askQuizQuestion(){
-  const q = QUIZ_QUESTIONS[quiz.idx];
-  const letters = ["A","B","C"];
-  const list = q.a.map((t,i)=>`<li><b>${letters[i]}</b> — ${escapeHTML(t)}</li>`).join("");
-  respondHTML(`<p><b>Q${quiz.idx+1}.</b> ${escapeHTML(q.q)}</p><ul>${list}</ul>`,150);
-}
-
-function handleBreak(raw){
-  const m = parseInt(raw.split(" ")[1]||"20",10); // default 20
-  const mins = clamp(isNaN(m)?20:m, 5, 60);
-  breakEndsAt = Date.now() + mins*60*1000;
-  if (breakTimer) clearInterval(breakTimer);
-  const id = "breakTimer_"+Math.random().toString(36).slice(2);
-  respondHTML(`<p id="${id}"><b>Break timer:</b> ${mins}:00</p>`, 150);
-  const elUpdater = ()=> {
-    const el = document.getElementById(id); if(!el){ clearInterval(breakTimer); return; }
-    const left = Math.max(0, breakEndsAt - Date.now());
-    const mm = Math.floor(left/60000).toString().padStart(2,"0");
-    const ss = Math.floor((left%60000)/1000).toString().padStart(2,"0");
-    el.innerHTML = `<b>Break timer:</b> ${mm}:${ss}`;
-    if (left<=0){ clearInterval(breakTimer); respondText("⏰ Break finished — please return to station per policy."); }
-  };
-  breakTimer = setInterval(elUpdater, 250);
-}
-function cancelBreak(){ if (breakTimer){ clearInterval(breakTimer); breakTimer=null; respondText("Break timer cancelled."); } }
-
-function handleSwap(raw){
-  // /swap 2025-09-10 12:00-20:00 Some note...
-  const parts = raw.split(" ").filter(Boolean);
-  if (parts.length < 3) return respondText("Usage: /swap YYYY-MM-DD HH:MM-HH:MM Note…");
-  const date = parts[1];
-  const range = parts[2];
-  const note = parts.slice(3).join(" ") || "(no note)";
-  store.swaps.push({ id: Math.random().toString(36).slice(2), date, range, note, createdISO:new Date().toISOString() });
-  saveToLS();
-  respondHTML(`<p><b>Swap request posted</b></p><p>${date} • ${range}<br>${escapeHTML(note)}</p>`);
-}
-function listSwaps(){
-  if (!store.swaps.length) return respondText("No swap requests yet.");
-  const html = store.swaps.slice(-10).reverse().map(s=>`<li>${s.date} • ${s.range} — ${escapeHTML(s.note)}</li>`).join("");
-  respondHTML(`<p><b>Latest swap requests</b></p><ul>${html}</ul>`);
-}
-
-/* ---- KB search helpers ---- */
-function scoreKB(entry, term){
-  term = term.toLowerCase();
-  let score = 0;
-  if (entry.topic.toLowerCase().includes(term)) score += 3;
-  if (entry.answer.toLowerCase().includes(term)) score += 1;
-  entry.keywords.forEach(k=>{ if (k.includes(term) || term.includes(k)) score += 2; });
-  return score;
-}
-function rankedKB(term){ return KB.map(k=>({ ...k, _score:scoreKB(k,term)})).filter(k=>k._score>0).sort((a,b)=>b._score-a._score); }
-function bestKB(text){
-  const term = text.trim();
-  const top = rankedKB(term)[0];
-  return top? top : null;
-}
-
-/* ---- Event: submit KB topic via click ---- */
-function escapeHtml(s){ return escapeHTML(s); } // legacy alias
-
-/* ---- Final tip ---- */
-respondText("Interactive features ready: /week, /policy, /quiz, /break, /swap board. Press Ctrl/⌘+K for the command palette.");
-
-/* ---- End ---- */
+  /* ---- Initial tip ---- */
+  if (chatLog) respondText("Interactive features ready: /week, /policy, /quiz, /break, /swap board. Press Ctrl/⌘+K for the command palette.");
+});

@@ -3,121 +3,29 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>McCrew AI — Playmobil Animals (Interactive)</title>
+  <title>McCrew AI — Standard</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
-<body class="theme-playmobil">
-  <!-- FX canvas (confetti, sparkles) -->
-  <canvas id="fx"></canvas>
-
+<body>
   <header class="topbar">
     <div class="brand">
       <span class="arch">M</span><span>cCrew AI</span>
     </div>
-
-    <!-- animated clouds -->
-    <div class="skies" aria-hidden="true">
-      <span class="cloud c1"></span>
-      <span class="cloud c2"></span>
-      <span class="cloud c3"></span>
-    </div>
-
-    <div class="toy-pill" id="openDrawer" title="Current Happy Meal">
-      🦁 🐼 🦊 🦒 <span>Playmobil Animals</span>
-    </div>
-
     <button id="openAdmin" class="ghost">Admin</button>
   </header>
 
-  <!-- Animal Stage -->
-  <section class="animal-stage">
-    <!-- LION -->
-    <svg class="animal a-lion" viewBox="0 0 120 120" role="img" aria-label="Lion">
-      <defs>
-        <radialGradient id="lionGrad" cx="50%" cy="50%">
-          <stop offset="0%" stop-color="#ffdf77"/>
-          <stop offset="100%" stop-color="#ffb84d"/>
-        </radialGradient>
-      </defs>
-      <circle cx="60" cy="60" r="38" fill="#a85b28"/>
-      <circle cx="60" cy="60" r="28" fill="url(#lionGrad)"/>
-      <circle cx="50" cy="55" r="4" class="eye"/>
-      <circle cx="70" cy="55" r="4" class="eye"/>
-      <rect x="56" y="62" width="8" height="10" rx="3" fill="#6b3b1c"/>
-      <path d="M45,78 Q60,90 75,78" fill="none" stroke="#6b3b1c" stroke-width="4" stroke-linecap="round"/>
-      <path class="tail" d="M95,70 q20,8 10,24" stroke="#a85b28" stroke-width="6" fill="none" stroke-linecap="round"/>
-    </svg>
-
-    <!-- PANDA -->
-    <svg class="animal a-panda" viewBox="0 0 120 120" role="img" aria-label="Panda">
-      <circle cx="60" cy="60" r="36" fill="#fff"/>
-      <circle cx="40" cy="40" r="12" fill="#0b1430"/>
-      <circle cx="80" cy="40" r="12" fill="#0b1430"/>
-      <ellipse cx="48" cy="60" rx="8" ry="10" fill="#0b1430"/>
-      <ellipse cx="72" cy="60" rx="8" ry="10" fill="#0b1430"/>
-      <circle cx="60" cy="70" r="6" fill="#0b1430"/>
-      <path d="M45,82 Q60,92 75,82" fill="none" stroke="#0b1430" stroke-width="4" stroke-linecap="round"/>
-    </svg>
-
-    <!-- FOX -->
-    <svg class="animal a-fox" viewBox="0 0 120 120" role="img" aria-label="Fox">
-      <defs>
-        <linearGradient id="foxGrad" x1="0" x2="1">
-          <stop offset="0%" stop-color="#ff7a3a"/>
-          <stop offset="100%" stop-color="#ff9f5e"/>
-        </linearGradient>
-      </defs>
-      <circle cx="60" cy="60" r="34" fill="url(#foxGrad)"/>
-      <polygon points="30,40 50,50 45,30" fill="#ff7a3a"/>
-      <polygon points="90,40 70,50 75,30" fill="#ff7a3a"/>
-      <circle cx="52" cy="58" r="4" class="eye"/>
-      <circle cx="68" cy="58" r="4" class="eye"/>
-      <polygon points="60,66 54,76 66,76" fill="#2d1a0d"/>
-      <path class="tail" d="M20,76 q-14,16 8,24" stroke="#ff9f5e" stroke-width="8" fill="none" stroke-linecap="round"/>
-      <path d="M45,84 Q60,92 75,84" fill="none" stroke="#2d1a0d" stroke-width="4" stroke-linecap="round"/>
-    </svg>
-
-    <!-- GIRAFFE -->
-    <svg class="animal a-giraffe" viewBox="0 0 120 120" role="img" aria-label="Giraffe">
-      <defs>
-        <pattern id="spots" width="10" height="10" patternUnits="userSpaceOnUse">
-          <rect width="10" height="10" fill="#ffd67a"/>
-          <circle cx="3" cy="3" r="2" fill="#cc9933"/>
-          <circle cx="8" cy="6" r="2" fill="#cc9933"/>
-        </pattern>
-      </defs>
-      <rect x="54" y="30" width="12" height="36" fill="url(#spots)"/>
-      <circle cx="60" cy="30" r="12" fill="#ffd67a" stroke="#cc9933" stroke-width="2"/>
-      <circle cx="56" cy="28" r="2" class="eye"/>
-      <circle cx="64" cy="28" r="2" class="eye"/>
-      <rect x="50" y="84" width="20" height="20" rx="6" fill="url(#spots)"/>
-      <path class="tail" d="M72,94 q18,8 10,18" stroke="#cc9933" stroke-width="5" fill="none" stroke-linecap="round"/>
-    </svg>
-
-    <div class="stage-tip">Click an animal to see toy info 🐾</div>
-  </section>
-
-  <!-- scrolling ribbon -->
-  <div class="theme-ribbon" aria-hidden="true">
-    <div class="ribbon-inner">
-      <span>🐵</span><span>🦁</span><span>🐼</span><span>🦊</span><span>🦒</span><span>🐧</span><span>🐮</span>
-      <span class="txt">Happy Meal • Playmobil Animals</span>
-      <span>🐵</span><span>🦁</span><span>🐼</span><span>🦊</span><span>🦒</span><span>🐧</span><span>🐮</span>
-    </div>
-  </div>
-
   <main class="layout">
     <!-- Left: quick actions -->
-    <aside class="panel sticker">
+    <aside class="panel">
       <h2>Quick Actions</h2>
       <div class="quick-grid">
         <button class="quick" data-msg="/shift">Today’s Shift</button>
         <button class="quick" data-msg="/pay">Today’s Pay</button>
         <button class="quick" data-msg="/nextpay">Next Paycheck</button>
-        <button class="quick" data-msg="Happy Meal — Playmobil Animals">Happy Meal Toys</button>
         <button class="quick" data-msg="What is the uniform policy?">Uniform Rules</button>
         <button class="quick" data-msg="How to set up fry station?">Fry Training</button>
         <button class="quick" data-msg="How to assemble a Big Mac?">Sandwich Build</button>
+        <button class="quick" data-msg="Safety rules for cleaning chemicals">Safety</button>
         <button class="quick" data-msg="What is the lateness policy?">Lateness</button>
       </div>
 
@@ -141,54 +49,20 @@
     </aside>
 
     <!-- Right: chat -->
-    <section class="chat sticker">
+    <section class="chat">
       <div id="chatLog" class="chat-log">
-        <div class="bot msg reveal">
-          <p>Welcome to <b>McCrew AI</b> <span class="tiny-pill">Playmobil Animals</span>! I can help with rules, training, Happy Meal toy info, and your shift/pay.</p>
-          <p>Try: <code>/shift</code>, <code>/pay</code>, <code>/nextpay</code>, or click an animal above.</p>
+        <div class="bot msg">
+          <p>Welcome to <b>McCrew AI</b> (Standard). I can help with rules, training, and your shift/pay info.</p>
+          <p>Try: <code>/shift</code>, <code>/pay</code>, <code>/nextpay</code>, or ask any policy question.</p>
         </div>
       </div>
 
       <form id="chatForm" class="chat-input">
-        <input id="chatText" placeholder="Ask about work, rules, training, or Happy Meal toys..." autocomplete="off" />
+        <input id="chatText" placeholder="Ask about work, rules, training, or pay..." autocomplete="off" />
         <button type="submit">Send</button>
       </form>
     </section>
   </main>
-
-  <!-- Slide-out drawer with toy cards -->
-  <aside class="drawer" id="drawer">
-    <header>
-      <h3>Playmobil Animals — Toy Info</h3>
-      <button id="closeDrawer" class="ghost">Close</button>
-    </header>
-    <div class="toy-grid">
-      <article class="toy-card" data-animal="lion">
-        <div class="toy-emoji">🦁</div>
-        <h4>Lion</h4>
-        <p>Brave and bouncy. Hand out safely; check week’s toy rotation and stock.</p>
-      </article>
-      <article class="toy-card" data-animal="panda">
-        <div class="toy-emoji">🐼</div>
-        <h4>Panda</h4>
-        <p>Cute favourite. Keep inserts together; avoid loose packaging at front counter.</p>
-      </article>
-      <article class="toy-card" data-animal="fox">
-        <div class="toy-emoji">🦊</div>
-        <h4>Fox</h4>
-        <p>Quick kit. If a guest asks to swap toys, follow your store policy & manager guidance.</p>
-      </article>
-      <article class="toy-card" data-animal="giraffe">
-        <div class="toy-emoji">🦒</div>
-        <h4>Giraffe</h4>
-        <p>Tall fun. Keep toy area tidy; rotate boxes by current promo week.</p>
-      </article>
-    </div>
-  </aside>
-
-  <!-- corner stickers -->
-  <div class="corner-sticker tl">🦁</div>
-  <div class="corner-sticker br">🦒</div>
 
   <!-- Admin modal -->
   <dialog id="adminModal">

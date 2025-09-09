@@ -1,4 +1,5 @@
 /* McCrew AI — Standard (Interactive) • DOM-safe + quiz-safe */
+var quiz = null;   // <-- must be first; prevents "Cannot access 'quiz' before initialization"
 
 document.addEventListener("DOMContentLoaded", () => {
   /* ---- Quiz FIRST (avoid TDZ) ---- */

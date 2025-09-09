@@ -1,17 +1,16 @@
-/* McCrew AI — Standard (Interactive) • DOM-safe + quiz-safe */
-var quiz = null;   // <-- must be first; prevents "Cannot access 'quiz' before initialization"
+/* McCrew AI — Standard (Polished + Animations) */
+
+/* put quiz first to avoid TDZ */
+var quiz = null;
+const QUIZ_QUESTIONS = [
+  { q:"How long should proper handwashing take?", a:["At least 10s","At least 20s","Until hands feel dry"], correct:1 },
+  { q:"What do you do if a guest asks about allergens?", a:["Guess from memory","Use official allergen charts","Say everything is gluten-free"], correct:1 },
+  { q:"Which shoes are acceptable?", a:["White trainers","Black non-slip","Open sandals"], correct:1 },
+  { q:"What happens after 3 lateness events in a period?", a:["Nothing","Review triggered","Immediate termination"], correct:1 },
+  { q:"When filtering fryers, you should…", a:["Mix any chemicals","Wear PPE and follow spec","Skip logging"], correct:1 },
+];
 
 document.addEventListener("DOMContentLoaded", () => {
-  /* ---- Quiz FIRST (avoid TDZ) ---- */
-  let quiz = null; // {idx, score, active}
-  const QUIZ_QUESTIONS = [
-    { q:"How long should proper handwashing take?", a:["At least 10s","At least 20s","Until hands feel dry"], correct:1 },
-    { q:"What do you do if a guest asks about allergens?", a:["Guess from memory","Use official allergen charts","Say everything is gluten-free"], correct:1 },
-    { q:"Which shoes are acceptable?", a:["White trainers","Black non-slip","Open sandals"], correct:1 },
-    { q:"What happens after 3 lateness events in a period?", a:["Nothing","Review triggered","Immediate termination"], correct:1 },
-    { q:"When filtering fryers, you should…", a:["Mix any chemicals","Wear PPE and follow spec","Skip logging"], correct:1 },
-  ];
-
   /* ---- Demo Data ---- */
   const store = {
     employees: [
@@ -83,21 +82,21 @@ document.addEventListener("DOMContentLoaded", () => {
     else if (freq==="monthly") d.setMonth(d.getMonth()+1);
     return d.toISOString().slice(0,10);
   }
-  function contains(text, arr){ return arr.some(a=>text.includes(a)); }
-  function clamp(n,min,max){ return Math.max(min, Math.min(max,n)); }
+  const clamp = (n,min,max)=>Math.max(min, Math.min(max,n));
   const warn = (m)=>console.warn("[McCrew]", m);
+  const escapeHTML = (s)=> s.replace(/[&<>"']/g, m=>({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;" }[m]));
 
   /* ---- Persistence ---- */
-  const LS_KEY = "mccrew_ai_standard_interactive_v1";
-  (function loadFromLS(){
-    try{
-      const raw = localStorage.getItem(LS_KEY);
-      if(!raw) return;
+  const LS_KEY = "mccrew_ai_polished_v1";
+  try{
+    const raw = localStorage.getItem(LS_KEY);
+    if(raw){
       const data = JSON.parse(raw);
       ["employees","payConfig","swaps"].forEach(k=>{ if(data[k]) store[k]=data[k]; });
-    }catch(e){ warn(e.message); }
-  })();
-  function saveToLS(){ localStorage.setItem(LS_KEY, JSON.stringify(store)); }
+      fxOn = data.fxOn ?? true;
+    }
+  }catch(e){ warn(e.message); }
+  const persist = ()=>localStorage.setItem(LS_KEY, JSON.stringify({ ...store, fxOn }));
 
   /* ---- Elements ---- */
   const chatLog = document.getElementById("chatLog");
@@ -105,7 +104,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const chatText = document.getElementById("chatText");
   const kbList  = document.getElementById("kbList");
   const empIdInput = document.getElementById("empId");
-
   const openAdminBtn = document.getElementById("openAdmin");
   const adminModal = document.getElementById("adminModal");
   const aEmpId = document.getElementById("aEmpId");
@@ -117,27 +115,27 @@ document.addEventListener("DOMContentLoaded", () => {
   const nextPayday = document.getElementById("nextPayday");
   const savePayConfig = document.getElementById("savePayConfig");
 
-  const openHelpBtn = document.getElementById("openHelp");
-  const helpModal = document.getElementById("helpModal");
+  const fxCanvas = document.getElementById("fx");
+  const toasts = document.getElementById("toasts");
+  const toggleFXBtn = document.getElementById("toggleFX");
 
-  /* ---- Helpers to avoid null crashes ---- */
-  const on = (el, ev, fn) => el && el.addEventListener ? el.addEventListener(ev, fn) : warn(`Skipped ${ev} on missing element`);
-  const has = (el, name) => { if(!el) warn(`Missing #${name}`); return !!el; };
+  const on = (el, ev, fn)=> el && el.addEventListener ? el.addEventListener(ev, fn) : warn(`skip ${ev}`);
+  const has = (el, id)=>{ if(!el) warn(`Missing #${id}`); return !!el; };
 
-  /* ---- KB render ---- */
+  /* ---- Render KB ---- */
   if (has(kbList,"kbList")){
     KB.forEach(item=>{
       const li = document.createElement("li");
       li.textContent = item.topic;
       li.addEventListener("click", ()=>{
         pushUser(`Tell me about ${item.topic}`);
-        respondHTML(`<p><b>${item.topic}</b></p><p>${escapeHTML(item.answer).replace(/\n/g,"<br>")}</p>`);
+        respondHTML(`<div class="slide-in"><p><b>${item.topic}</b></p><p>${escapeHTML(item.answer).replace(/\n/g,"<br>")}</p></div>`);
       });
       kbList.appendChild(li);
     });
   }
 
-  /* ---- Quick buttons ripple + chips ---- */
+  /* ---- Ripple + shine on quicks ---- */
   document.querySelectorAll(".quick, .chip").forEach(btn=>{
     on(btn,"click",(e)=>{
       const r = btn.getBoundingClientRect();
@@ -147,51 +145,36 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-  /* ---- Help / palette ---- */
-  on(openHelpBtn, "click", ()=> helpModal?.showModal?.());
-  on(window, "keydown", (e)=>{
-    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase()==="k"){ e.preventDefault(); helpModal?.showModal?.(); }
-  });
-
-  /* ---- Admin modal ---- */
-  on(openAdminBtn,"click", ()=>{
-    adminModal?.showModal?.();
-    renderEmpTable(); initPayConfigFields();
-  });
-  on(adminModal,"close", ()=> saveToLS());
-
+  /* ---- Admin ---- */
+  on(openAdminBtn,"click", ()=>{ adminModal?.showModal?.(); renderEmpTable(); initPayConfigFields(); });
+  on(adminModal,"close", persist);
   on(addEmpBtn,"click", ()=>{
     const id = (aEmpId?.value||"").trim(); if(!id) return;
     const name = (aName?.value||"").trim() || `Crew ${id}`;
     const rate = parseFloat(aRate?.value||"0") || 11.44;
-    const existing = store.employees.find(e=>e.id===id);
-    if(existing){ existing.name=name; existing.hourlyRate=rate; }
-    else store.employees.push({ id, name, hourlyRate: rate, plannedShifts: [] });
+    const ex = store.employees.find(e=>e.id===id);
+    if(ex){ ex.name=name; ex.hourlyRate=rate; } else store.employees.push({ id, name, hourlyRate: rate, plannedShifts: [] });
     if (aEmpId) aEmpId.value=""; if (aName) aName.value=""; if (aRate) aRate.value="";
-    renderEmpTable(); saveToLS();
+    renderEmpTable(); persist(); toast("Employee saved","good");
   });
   on(savePayConfig,"click", ()=>{
     if (!payFreq) return;
     store.payConfig.frequency = payFreq.value;
     store.payConfig.nextPayday = (nextPayday && nextPayday.value) || store.payConfig.nextPayday;
+    persist(); toast("Pay settings updated","good");
     respondText(`Saved pay config: ${store.payConfig.frequency}, next payday ${store.payConfig.nextPayday}`);
-    saveToLS();
   });
   function renderEmpTable(){
     if (!empTable) return;
     const rows = store.employees.map(e=>(
       `<tr><td>${e.id}</td><td>${escapeHTML(e.name)}</td><td>£${e.hourlyRate.toFixed(2)}/hr</td><td>${e.plannedShifts?.length||0} shifts</td></tr>`
     )).join("");
-    empTable.innerHTML = `
-      <table>
-        <thead><tr><th>ID</th><th>Name</th><th>Rate</th><th>Shifts</th></tr></thead>
-        <tbody>${rows||`<tr><td colspan="4">No employees yet</td></tr>`}</tbody>
-      </table>`;
+    empTable.innerHTML = `<table>
+      <thead><tr><th>ID</th><th>Name</th><th>Rate</th><th>Shifts</th></tr></thead>
+      <tbody>${rows||`<tr><td colspan="4">No employees yet</td></tr>`}</tbody>
+    </table>`;
   }
-  function initPayConfigFields(){
-    if (payFreq) payFreq.value = store.payConfig.frequency;
-    if (nextPayday) nextPayday.value = store.payConfig.nextPayday;
-  }
+  function initPayConfigFields(){ if (payFreq) payFreq.value = store.payConfig.frequency; if (nextPayday) nextPayday.value = store.payConfig.nextPayday; }
 
   /* ---- Chat ---- */
   on(chatForm,"submit",(e)=>{
@@ -207,7 +190,7 @@ document.addEventListener("DOMContentLoaded", () => {
   function pushUser(text){
     if (!chatLog) return;
     const node = document.createElement("div");
-    node.className = "user msg";
+    node.className = "user msg slide-in";
     node.innerHTML = `<p>${escapeHTML(text)}</p>`;
     chatLog.appendChild(node); chatLog.scrollTop = chatLog.scrollHeight;
   }
@@ -219,44 +202,35 @@ document.addEventListener("DOMContentLoaded", () => {
     chatLog.appendChild(node); chatLog.scrollTop = chatLog.scrollHeight;
     return node;
   }
-  function respondHTML(html, delay=250){
+  function respondHTML(html, delay=220){
     const bubble = typingBubble();
-    setTimeout(()=>{ if (bubble){ bubble.innerHTML = html; chatLog.scrollTop = chatLog.scrollHeight; } }, clamp(delay,0,1200));
+    setTimeout(()=>{ if (bubble){ bubble.innerHTML = html; bubble.classList.add("slide-in"); chatLog.scrollTop = chatLog.scrollHeight; } }, clamp(delay,0,1200));
   }
-  function respondText(text, delay=250){
-    respondHTML(`<p>${escapeHTML(text).replace(/\n/g,"<br>")}</p>`, delay);
-  }
-  function escapeHTML(s){ return s.replace(/[&<>"']/g, m=>({ "&":"&amp;","<":"&lt;","&gt;":"&gt;","\"":"&quot;","'":"&#39;" }[m])); }
-
-  /* ---- Break timer ---- */
-  let breakTimer = null, breakEndsAt = null;
+  function respondText(text, delay=220){ respondHTML(`<p>${escapeHTML(text).replace(/\n/g,"<br>")}</p>`, delay); }
 
   /* ---- Router ---- */
   function handleMessage(raw){
     const text = raw.toLowerCase();
 
-    // Quiz answers (quiz is already defined)
+    // quiz answers
     if (quiz && quiz.active && !text.startsWith("/")){
       const pick = text.trim()[0]?.toLowerCase();
       const idx = "abc123".indexOf(pick);
       if (idx !== -1){
-        const mapped = idx % 3; // 0/1/2
+        const mapped = idx % 3;
         const curr = QUIZ_QUESTIONS[quiz.idx];
         const ok = mapped === curr.correct;
-        if (ok) quiz.score++;
-        respondHTML(`<p><b>${ok? "✅ Correct":"❌ Not quite"}</b> — ${escapeHTML(curr.a[curr.correct])}</p>`,150);
+        if (ok) beep(880,120,'triangle'); else beep(220,160,'sawtooth');
+        respondHTML(`<p><b>${ok? "✅ Correct":"❌ Not quite"}</b> — ${escapeHTML(curr.a[curr.correct])}</p>`,140);
         quiz.idx++;
         if (quiz.idx >= QUIZ_QUESTIONS.length){
-          respondHTML(`<p><b>Quiz complete!</b> Score: ${quiz.score}/${QUIZ_QUESTIONS.length}</p>`,250);
-          quiz = null;
-        } else {
-          setTimeout(askQuizQuestion, 350);
-        }
+          respondHTML(`<p><b>Quiz complete!</b> Score: ${quiz.score + (ok?1:0)}/${QUIZ_QUESTIONS.length}</p>`,220);
+          quiz = null; toast("Quiz complete!","good");
+        } else { if (ok) quiz.score++; setTimeout(askQuizQuestion, 300); }
         return;
       }
     }
 
-    // Commands
     if (text.startsWith("/help"))   return showHelp();
     if (text.startsWith("/shift"))  return handleShift();
     if (text.startsWith("/pay"))    return handleTodayPay();
@@ -266,11 +240,10 @@ document.addEventListener("DOMContentLoaded", () => {
     if (text.startsWith("/quiz"))   return handleQuiz(raw);
     if (text.startsWith("/quit"))   { quiz=null; return respondText("Exited quiz."); }
     if (text.startsWith("/break"))  return handleBreak(raw);
-    if (text.startsWith("/cancelbreak")) return cancelBreak();
+    if (text.startsWith("/cancelbreak")) return respondText("Break timer cancelled.");
     if (text.startsWith("/swap"))   return handleSwap(raw);
     if (text.startsWith("/swaps"))  return listSwaps();
 
-    // Mini checklist
     if (text.includes("fryer") && text.includes("checklist")){
       return respondHTML(`<p><b>Fryer Filtering Checklist</b></p>
         <ol>
@@ -278,14 +251,12 @@ document.addEventListener("DOMContentLoaded", () => {
           <li>Set to filter; confirm temperature & signage.</li>
           <li>Scrape & skim, then filter per spec time.</li>
           <li>Wipe surrounds; record in log.</li>
-        </ol>`, 250);
+        </ol>`);
     }
 
-    // KB fuzzy
     const kb = bestKB(raw);
     if (kb) return respondHTML(`<p><b>${kb.topic}</b></p><p>${escapeHTML(kb.answer).replace(/\n/g,"<br>")}</p>`);
 
-    // Fallback
     showHelp();
   }
 
@@ -301,7 +272,11 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   function findEmployee(idMaybe){
     const id = (idMaybe || empIdInput?.value || "").trim();
-    if(!id) { respondText("Add your Employee ID first (left panel)."); return null; }
+    if(!id) {
+      respondText("Add your Employee ID first (left panel).");
+      empIdInput?.classList.add("shake"); setTimeout(()=>empIdInput?.classList.remove("shake"), 400);
+      return null;
+    }
     const emp = store.employees.find(e=>e.id===id);
     if(!emp){ respondText(`No employee with ID ${id} in the demo data.`); return null; }
     return emp;
@@ -317,7 +292,8 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   function handleWeek(idMaybe){
     const emp = findEmployee(idMaybe); if(!emp) return;
-    const start = new Date(); const days = [...Array(7)].map((_,i)=>{const d=new Date(start); d.setDate(d.getDate()+i); return d.toISOString().slice(0,10);});
+    const start = new Date();
+    const days = [...Array(7)].map((_,i)=>{const d=new Date(start); d.setDate(d.getDate()+i); return d.toISOString().slice(0,10);});
     const items = days.map(d=>{
       const s = emp.plannedShifts?.find(x=>x.date===d);
       return `<li>${d}: ${s? `${s.start}–${s.end}` : "—"}</li>`;
@@ -337,6 +313,7 @@ document.addEventListener("DOMContentLoaded", () => {
     respondHTML(`<p><b>Estimated Pay for Today</b></p>
       <p>${emp.name}: £${est.toFixed(2)} (rate £${emp.hourlyRate.toFixed(2)}/hr, ${hours.toFixed(2)} hrs)</p>
       <small>Demo estimate only; actual pay depends on timeclock, premiums, breaks, taxes, etc.</small>`);
+    toast("Pay estimated","good"); confetti(900);
   }
   function handleNextPay(){
     const { frequency, nextPayday } = store.payConfig;
@@ -344,12 +321,13 @@ document.addEventListener("DOMContentLoaded", () => {
     let next = nextPayday;
     if (today > nextPayday){
       let t = nextPayday; while (t <= today){ t = paydayAfter(t, frequency); }
-      next = t; store.payConfig.nextPayday = next; saveToLS();
+      next = t; store.payConfig.nextPayday = next; persist();
     }
     const after = paydayAfter(next, frequency);
     respondHTML(`<p><b>Next Paycheck</b></p>
       <p>Next payday: <b>${next}</b> • Frequency: <b>${frequency}</b></p>
       <p>Following payday: ${after}</p>`);
+    toast("Next payday shown","good"); confetti(900);
   }
   function handlePolicy(raw){
     const term = raw.split(" ").slice(1).join(" ").trim();
@@ -363,7 +341,8 @@ document.addEventListener("DOMContentLoaded", () => {
     if (raw.includes("start")){
       quiz = { idx:0, score:0, active:true };
       respondText("Starting 5-question training quiz. Answer with A/B/C (or 1/2/3). Type /quit to exit.");
-      setTimeout(askQuizQuestion, 300);
+      setTimeout(askQuizQuestion, 280);
+      toast("Quiz started");
     } else respondText("Use: /quiz start");
   }
   function askQuizQuestion(){
@@ -371,36 +350,29 @@ document.addEventListener("DOMContentLoaded", () => {
     const q = QUIZ_QUESTIONS[quiz.idx];
     const letters = ["A","B","C"];
     const list = q.a.map((t,i)=>`<li><b>${letters[i]}</b> — ${escapeHTML(t)}</li>`).join("");
-    respondHTML(`<p><b>Q${quiz.idx+1}.</b> ${escapeHTML(q.q)}</p><ul>${list}</ul>`,150);
+    respondHTML(`<p><b>Q${quiz.idx+1}.</b> ${escapeHTML(q.q)}</p><ul>${list}</ul>`,120);
   }
   function handleBreak(raw){
     const m = parseInt(raw.split(" ")[1]||"20",10);
     const mins = clamp(isNaN(m)?20:m, 5, 60);
-    let breakTimer = null;
-    let breakEndsAt = Date.now() + mins*60*1000;
+    let ends = Date.now() + mins*60*1000;
     const id = "breakTimer_"+Math.random().toString(36).slice(2);
-    respondHTML(`<p id="${id}"><b>Break timer:</b> ${mins}:00</p>`, 150);
-    const elUpdater = ()=> {
-      const el = document.getElementById(id); if(!el){ clearInterval(breakTimer); return; }
-      const left = Math.max(0, breakEndsAt - Date.now());
+    respondHTML(`<p id="${id}"><b>Break timer:</b> ${mins}:00</p>`, 120);
+    const t = setInterval(()=>{
+      const el = document.getElementById(id); if(!el){ clearInterval(t); return; }
+      const left = Math.max(0, ends - Date.now());
       const mm = Math.floor(left/60000).toString().padStart(2,"0");
       const ss = Math.floor((left%60000)/1000).toString().padStart(2,"0");
       el.innerHTML = `<b>Break timer:</b> ${mm}:${ss}`;
-      if (left<=0){ clearInterval(breakTimer); respondText("⏰ Break finished — please return to station per policy."); }
-    };
-    breakTimer = setInterval(elUpdater, 250);
+      if (left<=0){ clearInterval(t); respondText("⏰ Break finished — please return to station per policy."); beep(880,200); setTimeout(()=>beep(660,180),220); setTimeout(()=>beep(880,240),440); toast("Break finished","warn"); }
+    }, 250);
   }
-  function cancelBreak(){ respondText("Break timer cancelled."); } // no-op version; simple demo
-
   function handleSwap(raw){
     const parts = raw.split(" ").filter(Boolean);
     if (parts.length < 3) return respondText("Usage: /swap YYYY-MM-DD HH:MM-HH:MM Note…");
-    const date = parts[1];
-    const range = parts[2];
-    const note = parts.slice(3).join(" ") || "(no note)";
-    store.swaps.push({ id: Math.random().toString(36).slice(2), date, range, note, createdISO:new Date().toISOString() });
-    saveToLS();
-    respondHTML(`<p><b>Swap request posted</b></p><p>${date} • ${range}<br>${escapeHTML(note)}</p>`);
+    store.swaps.push({ id: Math.random().toString(36).slice(2), date:parts[1], range:parts[2], note:parts.slice(3).join(" ")||"(no note)", createdISO:new Date().toISOString() });
+    persist(); toast("Swap request posted","good");
+    respondHTML(`<p><b>Swap request posted</b></p><p>${parts[1]} • ${parts[2]}<br>${escapeHTML(parts.slice(3).join(" ")||"(no note)")}</p>`);
   }
   function listSwaps(){
     if (!store.swaps.length) return respondText("No swap requests yet.");
@@ -408,22 +380,75 @@ document.addEventListener("DOMContentLoaded", () => {
     respondHTML(`<p><b>Latest swap requests</b></p><ul>${html}</ul>`);
   }
 
-  /* ---- KB search ---- */
+  /* ---- KB search helpers ---- */
   function scoreKB(entry, term){
-    term = term.toLowerCase();
-    let score = 0;
+    term = term.toLowerCase(); let score = 0;
     if (entry.topic.toLowerCase().includes(term)) score += 3;
     if (entry.answer.toLowerCase().includes(term)) score += 1;
     entry.keywords.forEach(k=>{ if (k.includes(term) || term.includes(k)) score += 2; });
     return score;
   }
-  function rankedKB(term){ return KB.map(k=>({ ...k, _score:scoreKB(k,term)})).filter(k=>k._score>0).sort((a,b)=>b._score-a._score); }
-  function bestKB(text){
-    const term = text.trim();
-    const top = rankedKB(term)[0];
-    return top? top : null;
+  function rankedKB(term){ return KB.map(k=>({ ...k, _s:scoreKB(k,term)})).filter(k=>k._s>0).sort((a,b)=>b._s-a._s); }
+  function bestKB(text){ return rankedKB(text)[0] || null; }
+
+  /* ---- Toasts ---- */
+  function toast(msg, type=""){ if(!toasts) return;
+    const el = document.createElement("div");
+    el.className = `toast ${type}`; el.textContent = msg;
+    toasts.appendChild(el);
+    setTimeout(()=>{ el.classList.add("leave"); setTimeout(()=>el.remove(), 180); }, 2000);
   }
 
+  /* ---- Sounds ---- */
+  function beep(freq=880, ms=160, type='sine'){
+    try{
+      const AC = window.AudioContext || window.webkitAudioContext;
+      const ctx = new AC();
+      const o = ctx.createOscillator(); const g = ctx.createGain();
+      o.type = type; o.frequency.value = freq; o.connect(g); g.connect(ctx.destination);
+      o.start(); g.gain.setValueAtTime(0.2, ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + ms/1000);
+      setTimeout(()=>{ o.stop(); ctx.close(); }, ms+60);
+    }catch{}
+  }
+
+  /* ---- Confetti FX (toggleable) ---- */
+  let fxOn = true;
+  let confettiActive = false, pieces = [];
+  const ctx = fxCanvas?.getContext?.('2d');
+  function resizeFx(){ if(!fxCanvas) return; fxCanvas.width = innerWidth; fxCanvas.height = innerHeight; }
+  addEventListener('resize', resizeFx); resizeFx();
+  function confetti(ms=1000){
+    if (!fxOn || !ctx || !fxCanvas) return;
+    const n = 120; pieces.length = 0;
+    for(let i=0;i<n;i++){
+      pieces.push({ x: Math.random()*fxCanvas.width, y: -20 - Math.random()*fxCanvas.height*0.3, r: 4 + Math.random()*5,
+        vy: 2+Math.random()*3, vx: -1.5 + Math.random()*3, rot: Math.random()*Math.PI, vr: -0.2 + Math.random()*0.4,
+        color: `hsl(${Math.random()*360},90%,60%)`, shape: Math.random()<0.5?'rect':'circ' });
+    }
+    if(!confettiActive){ confettiActive = true; requestAnimationFrame(tick); }
+    setTimeout(()=>{ confettiActive=false; }, ms);
+  }
+  function tick(){
+    if (!ctx || !fxCanvas) return;
+    ctx.clearRect(0,0,fxCanvas.width,fxCanvas.height);
+    pieces.forEach(p=>{
+      p.x += p.vx; p.y += p.vy; p.rot += p.vr;
+      if (p.y > fxCanvas.height+20) { p.y = -20; p.x = Math.random()*fxCanvas.width; }
+      ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot); ctx.fillStyle = p.color;
+      if (p.shape==='rect'){ ctx.fillRect(-p.r, -p.r, p.r*2, p.r*2); } else { ctx.beginPath(); ctx.arc(0,0,p.r,0,Math.PI*2); ctx.fill(); }
+      ctx.restore();
+    });
+    if(confettiActive) requestAnimationFrame(tick);
+  }
+  on(toggleFXBtn,"click", ()=>{
+    fxOn = !fxOn; toggleFXBtn.textContent = `FX: ${fxOn? "On":"Off"}`; persist();
+    toast(`FX ${fxOn? "enabled":"disabled"}`);
+    if (!fxOn && ctx) ctx.clearRect(0,0,fxCanvas.width,fxCanvas.height);
+  });
+
   /* ---- Initial tip ---- */
-  if (chatLog) respondText("Interactive features ready: /week, /policy, /quiz, /break, /swap board. Press Ctrl/⌘+K for the command palette.");
+  respondText("Animations on. Use /week, /policy, /quiz, /break, /swap. Toggle FX in the header.");
 });
+
+/* ==== end file ==== */

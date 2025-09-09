@@ -3,22 +3,23 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>McCrew AI — Standard (Interactive)</title>
+  <title>McCrew AI — Standard (Polished)</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
+  <!-- FX canvas (confetti) -->
+  <canvas id="fx" class="fx"></canvas>
+
   <header class="topbar">
     <div class="brand">
-      <span class="arch">M</span><span>cCrew AI</span>
+      <span class="arch glow">M</span><span>cCrew AI</span>
     </div>
-
     <div class="spacer"></div>
-
-    <button id="openHelp" class="ghost">Help</button>
+    <button id="toggleFX" class="ghost">FX: On</button>
     <button id="openAdmin" class="ghost">Admin</button>
   </header>
 
-  <main class="layout">
+  <main class="layout fade-in">
     <!-- Left: quick actions -->
     <aside class="panel">
       <h2>Quick Actions</h2>
@@ -42,7 +43,7 @@
       <div class="suggestions">
         <span>Try:</span>
         <button class="chip" data-msg="Show fryer filtering checklist">fryer checklist</button>
-        <button class="chip" data-msg="/swap 2025-09-10 12:00-20:00 Need to swap for appointment">request shift swap</button>
+        <button class="chip" data-msg="/swap 2025-09-10 12:00-20:00 Need to swap for appointment">request swap</button>
         <button class="chip" data-msg="/swaps">view swap board</button>
       </div>
 
@@ -55,62 +56,18 @@
     <!-- Right: chat -->
     <section class="chat">
       <div id="chatLog" class="chat-log">
-        <div class="bot msg">
+        <div class="bot msg slide-in">
           <p>Welcome to <b>McCrew AI</b> (Standard). Ask me about rules, training, shifts & pay.</p>
-          <p>Commands: <code>/help</code>, <code>/shift</code>, <code>/week</code>, <code>/pay</code>, <code>/nextpay</code>, <code>/policy &lt;term&gt;</code>, <code>/quiz start</code>, <code>/break 20</code>, <code>/swap &lt;YYYY-MM-DD HH:MM-HH:MM note&gt;</code>, <code>/swaps</code>, <code>/quit</code>.</p>
+          <p>Commands: <code>/help</code>, <code>/shift</code>, <code>/week</code>, <code>/pay</code>, <code>/nextpay</code>, <code>/policy &lt;term&gt;</code>, <code>/quiz start</code>, <code>/break 20</code>, <code>/swap &lt;date time-range note&gt;</code>, <code>/swaps</code>.</p>
         </div>
       </div>
 
       <form id="chatForm" class="chat-input">
-        <input id="chatText" placeholder="Type /help or ask a rule… (Ctrl/⌘+K opens command palette)" autocomplete="off" />
-        <button type="submit">Send</button>
+        <input id="chatText" placeholder="Type /help or ask a rule…" autocomplete="off" />
+        <button type="submit" class="send">Send</button>
       </form>
     </section>
   </main>
-
-  <!-- Command palette -->
-  <dialog id="helpModal">
-    <form method="dialog" class="help">
-      <header>
-        <h3>Shortcuts & Commands</h3>
-        <button value="close" class="ghost">Close</button>
-      </header>
-      <div class="grid">
-        <div>
-          <h4>Scheduling</h4>
-          <ul>
-            <li><code>/shift</code> — Today’s shift</li>
-            <li><code>/week</code> — Next 7 days</li>
-            <li><code>/swap YYYY-MM-DD 12:00-20:00 note</code> — Request swap</li>
-            <li><code>/swaps</code> — View swap board</li>
-          </ul>
-        </div>
-        <div>
-          <h4>Pay</h4>
-          <ul>
-            <li><code>/pay</code> — Today’s estimated pay</li>
-            <li><code>/nextpay</code> — Next payday</li>
-          </ul>
-        </div>
-        <div>
-          <h4>Learning</h4>
-          <ul>
-            <li><code>/policy &lt;term&gt;</code> — Search policies</li>
-            <li><code>/quiz start</code> — 5-question training quiz</li>
-            <li><code>/quit</code> — Exit quiz</li>
-          </ul>
-        </div>
-        <div>
-          <h4>Wellbeing</h4>
-          <ul>
-            <li><code>/break 20</code> — Start break timer (mins)</li>
-            <li><code>/cancelbreak</code> — Stop timer</li>
-          </ul>
-        </div>
-      </div>
-      <p class="hint">Tip: Press <b>Ctrl/⌘+K</b> to open this palette anytime.</p>
-    </form>
-  </dialog>
 
   <!-- Admin -->
   <dialog id="adminModal">
@@ -152,6 +109,9 @@
     <small>Demo only. Replace mock data & KB with your store/company sources.</small>
   </footer>
 
-  <script src="app.js" defer></script
+  <!-- Toasts -->
+  <div id="toasts" class="toasts"></div>
+
+  <script src="app.js" defer></script>
 </body>
 </html>

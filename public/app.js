@@ -1,6 +1,6 @@
-/* McCrew AI — Standard (Polished + Animations) */
+/* McCrew AI — Polished + Animations + Admin Close Fix */
 
-/* put quiz first to avoid TDZ */
+/* quiz first to avoid TDZ */
 var quiz = null;
 const QUIZ_QUESTIONS = [
   { q:"How long should proper handwashing take?", a:["At least 10s","At least 20s","Until hands feel dry"], correct:1 },
@@ -84,10 +84,11 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   const clamp = (n,min,max)=>Math.max(min, Math.min(max,n));
   const warn = (m)=>console.warn("[McCrew]", m);
-  const escapeHTML = (s)=> s.replace(/[&<>"']/g, m=>({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;" }[m]));
+  const escapeHTML = (s)=> s.replace(/[&<>"']/g, m=>({ "&":"&amp;","<":"&lt;","&gt;":"&gt;","\"":"&quot;","'":"&#39;" }[m]));
 
   /* ---- Persistence ---- */
-  const LS_KEY = "mccrew_ai_polished_v1";
+  const LS_KEY = "mccrew_ai_polished_v2";
+  let fxOn = true;
   try{
     const raw = localStorage.getItem(LS_KEY);
     if(raw){
@@ -104,8 +105,10 @@ document.addEventListener("DOMContentLoaded", () => {
   const chatText = document.getElementById("chatText");
   const kbList  = document.getElementById("kbList");
   const empIdInput = document.getElementById("empId");
+
   const openAdminBtn = document.getElementById("openAdmin");
   const adminModal = document.getElementById("adminModal");
+  const closeAdminBtn = document.getElementById("closeAdmin"); // NEW
   const aEmpId = document.getElementById("aEmpId");
   const aName  = document.getElementById("aName");
   const aRate  = document.getElementById("aRate");
@@ -145,9 +148,20 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-  /* ---- Admin ---- */
-  on(openAdminBtn,"click", ()=>{ adminModal?.showModal?.(); renderEmpTable(); initPayConfigFields(); });
+  /* ---- Admin open/close (fixed) ---- */
+  on(openAdminBtn,"click", ()=>{
+    adminModal?.showModal?.();
+    renderEmpTable(); initPayConfigFields();
+  });
+  on(closeAdminBtn,"click", ()=> adminModal?.close?.());               // click Close
+  on(adminModal,"cancel", (e)=>{ e.preventDefault(); adminModal.close(); }); // Esc key
+  on(adminModal,"click", (e)=>{                                      // click backdrop
+    const r = adminModal.getBoundingClientRect();
+    const outside = e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom;
+    if (outside) adminModal.close();
+  });
   on(adminModal,"close", persist);
+
   on(addEmpBtn,"click", ()=>{
     const id = (aEmpId?.value||"").trim(); if(!id) return;
     const name = (aName?.value||"").trim() || `Crew ${id}`;
@@ -413,13 +427,12 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   /* ---- Confetti FX (toggleable) ---- */
-  let fxOn = true;
   let confettiActive = false, pieces = [];
-  const ctx = fxCanvas?.getContext?.('2d');
+  const ctx2d = fxCanvas?.getContext?.('2d');
   function resizeFx(){ if(!fxCanvas) return; fxCanvas.width = innerWidth; fxCanvas.height = innerHeight; }
   addEventListener('resize', resizeFx); resizeFx();
   function confetti(ms=1000){
-    if (!fxOn || !ctx || !fxCanvas) return;
+    if (!fxOn || !ctx2d || !fxCanvas) return;
     const n = 120; pieces.length = 0;
     for(let i=0;i<n;i++){
       pieces.push({ x: Math.random()*fxCanvas.width, y: -20 - Math.random()*fxCanvas.height*0.3, r: 4 + Math.random()*5,
@@ -430,25 +443,27 @@ document.addEventListener("DOMContentLoaded", () => {
     setTimeout(()=>{ confettiActive=false; }, ms);
   }
   function tick(){
-    if (!ctx || !fxCanvas) return;
-    ctx.clearRect(0,0,fxCanvas.width,fxCanvas.height);
+    if (!ctx2d || !fxCanvas) return;
+    ctx2d.clearRect(0,0,fxCanvas.width,fxCanvas.height);
     pieces.forEach(p=>{
       p.x += p.vx; p.y += p.vy; p.rot += p.vr;
       if (p.y > fxCanvas.height+20) { p.y = -20; p.x = Math.random()*fxCanvas.width; }
-      ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot); ctx.fillStyle = p.color;
-      if (p.shape==='rect'){ ctx.fillRect(-p.r, -p.r, p.r*2, p.r*2); } else { ctx.beginPath(); ctx.arc(0,0,p.r,0,Math.PI*2); ctx.fill(); }
-      ctx.restore();
+      ctx2d.save(); ctx2d.translate(p.x, p.y); ctx2d.rotate(p.rot); ctx2d.fillStyle = p.color;
+      if (p.shape==='rect'){ ctx2d.fillRect(-p.r, -p.r, p.r*2, p.r*2); } else { ctx2d.beginPath(); ctx2d.arc(0,0,p.r,0,Math.PI*2); ctx2d.fill(); }
+      ctx2d.restore();
     });
     if(confettiActive) requestAnimationFrame(tick);
   }
   on(toggleFXBtn,"click", ()=>{
     fxOn = !fxOn; toggleFXBtn.textContent = `FX: ${fxOn? "On":"Off"}`; persist();
     toast(`FX ${fxOn? "enabled":"disabled"}`);
-    if (!fxOn && ctx) ctx.clearRect(0,0,fxCanvas.width,fxCanvas.height);
+    if (!fxOn && ctx2d) ctx2d.clearRect(0,0,fxCanvas.width,fxCanvas.height);
   });
 
   /* ---- Initial tip ---- */
   respondText("Animations on. Use /week, /policy, /quiz, /break, /swap. Toggle FX in the header.");
 });
 
-/* ==== end file ==== */
+/* ===== helpers outside DOMContentLoaded ===== */
+function todayISO(){ return new Date().toISOString().slice(0,10); }
+function offsetDate(days){ const d = new Date(); d.setDate(d.getDate()+days); return d.toISOString().slice(0,10); }

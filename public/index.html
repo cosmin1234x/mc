@@ -57,7 +57,7 @@
     <section class="chat">
       <div id="chatLog" class="chat-log">
         <div class="bot msg slide-in">
-          <p>Welcome to <b>McCrew AI</b> (Standard). Ask me about rules, training, shifts & pay.</p>
+          <p>Welcome to <b>McCrew AI</b>. Ask me about rules, training, shifts & pay.</p>
           <p>Commands: <code>/help</code>, <code>/shift</code>, <code>/week</code>, <code>/pay</code>, <code>/nextpay</code>, <code>/policy &lt;term&gt;</code>, <code>/quiz start</code>, <code>/break 20</code>, <code>/swap &lt;date time-range note&gt;</code>, <code>/swaps</code>.</p>
         </div>
       </div>
@@ -74,7 +74,8 @@
     <form method="dialog" class="admin">
       <header>
         <h3>Admin • Demo Data</h3>
-        <button value="close" class="ghost">Close</button>
+        <!-- FIX: explicit close button -->
+        <button id="closeAdmin" type="button" class="ghost">Close</button>
       </header>
 
       <section>

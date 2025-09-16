@@ -19,6 +19,17 @@
     <button id="openAdmin" class="ghost">Admin</button>
   </header>
 
+  <header class="topbar">
+  <div class="brand">
+    <span class="arch glow">M</span><span>cCrew AI</span>
+  </div>
+  <div class="spacer"></div>
+  <span id="who" class="ghost" style="border:none;cursor:default"></span>
+  <button id="toggleFX" class="ghost">FX: On</button>
+  <button id="openAdmin" class="ghost">Admin</button>
+  <button id="logout" class="ghost" style="display:none">Logout</button>
+  </header>
+
   <main class="layout fade-in">
     <!-- Left: quick actions -->
     <aside class="panel">
@@ -116,3 +127,11 @@
   <script src="app.js" defer></script>
 </body>
 </html>
+
+<!-- Toasts container already exists -->
+<div id="toasts" class="toasts"></div>
+
+<!-- NEW: session first -->
+<script src="session.js" defer></script>
+<!-- then your app -->
+<script src="app.js" defer></script>

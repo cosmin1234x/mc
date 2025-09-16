@@ -1,4 +1,4 @@
-/* McCrew AI — Polished + Animations + Admin Close Fix */
+/* McCrew AI — Polished + Animations + Admin Close Fix + Clean Confetti */
 
 /* quiz first to avoid TDZ */
 var quiz = null;
@@ -84,10 +84,10 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   const clamp = (n,min,max)=>Math.max(min, Math.min(max,n));
   const warn = (m)=>console.warn("[McCrew]", m);
-  const escapeHTML = (s)=> s.replace(/[&<>"']/g, m=>({ "&":"&amp;","<":"&lt;","&gt;":"&gt;","\"":"&quot;","'":"&#39;" }[m]));
+  const escapeHTML = (s)=> s.replace(/[&<>"']/g, m=>({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;" }[m]));
 
   /* ---- Persistence ---- */
-  const LS_KEY = "mccrew_ai_polished_v2";
+  const LS_KEY = "mccrew_ai_polished_v3";
   let fxOn = true;
   try{
     const raw = localStorage.getItem(LS_KEY);
@@ -108,7 +108,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const openAdminBtn = document.getElementById("openAdmin");
   const adminModal = document.getElementById("adminModal");
-  const closeAdminBtn = document.getElementById("closeAdmin"); // NEW
+  const closeAdminBtn = document.getElementById("closeAdmin"); // explicit close button
   const aEmpId = document.getElementById("aEmpId");
   const aName  = document.getElementById("aName");
   const aRate  = document.getElementById("aRate");
@@ -153,9 +153,9 @@ document.addEventListener("DOMContentLoaded", () => {
     adminModal?.showModal?.();
     renderEmpTable(); initPayConfigFields();
   });
-  on(closeAdminBtn,"click", ()=> adminModal?.close?.());               // click Close
+  on(closeAdminBtn,"click", ()=> adminModal?.close?.());               // Close button
   on(adminModal,"cancel", (e)=>{ e.preventDefault(); adminModal.close(); }); // Esc key
-  on(adminModal,"click", (e)=>{                                      // click backdrop
+  on(adminModal,"click", (e)=>{                                      // Backdrop click
     const r = adminModal.getBoundingClientRect();
     const outside = e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom;
     if (outside) adminModal.close();
@@ -426,44 +426,116 @@ document.addEventListener("DOMContentLoaded", () => {
     }catch{}
   }
 
-  /* ---- Confetti FX (toggleable) ---- */
-  let confettiActive = false, pieces = [];
+  /* ---- Confetti FX (toggleable, fade + auto-clear) ---- */
+  let confettiActive = false;
+  let pieces = [];
+  let rafId = 0;
+  let killAt = 0;
+  let fadeMs = 350; // fade-out duration
+
   const ctx2d = fxCanvas?.getContext?.('2d');
-  function resizeFx(){ if(!fxCanvas) return; fxCanvas.width = innerWidth; fxCanvas.height = innerHeight; }
-  addEventListener('resize', resizeFx); resizeFx();
+  function resizeFx(){
+    if(!fxCanvas) return;
+    fxCanvas.width = innerWidth;
+    fxCanvas.height = innerHeight;
+  }
+  addEventListener('resize', resizeFx);
+  resizeFx();
+
+  function clearFxCanvas(){
+    if (ctx2d && fxCanvas) ctx2d.clearRect(0,0,fxCanvas.width,fxCanvas.height);
+  }
+
+  function stopConfetti(clear=true){
+    confettiActive = false;
+    if (rafId) cancelAnimationFrame(rafId);
+    rafId = 0;
+    if (clear) clearFxCanvas();
+    pieces.length = 0;
+  }
+
+  function makePieces(n){
+    const arr = [];
+    for (let i=0;i<n;i++){
+      arr.push({
+        x: Math.random()*fxCanvas.width,
+        y: -20 - Math.random()*fxCanvas.height*0.25,
+        r: 4 + Math.random()*5,
+        vy: 2 + Math.random()*3,
+        vx: -1.2 + Math.random()*2.4,
+        rot: Math.random()*Math.PI,
+        vr: -0.25 + Math.random()*0.5,
+        color: `hsl(${Math.random()*360},90%,60%)`,
+        shape: Math.random()<0.5 ? 'rect' : 'circ'
+      });
+    }
+    return arr;
+  }
+
+  /** Fire confetti for ms milliseconds. Smoothly fades out and clears canvas. */
   function confetti(ms=1000){
     if (!fxOn || !ctx2d || !fxCanvas) return;
-    const n = 120; pieces.length = 0;
-    for(let i=0;i<n;i++){
-      pieces.push({ x: Math.random()*fxCanvas.width, y: -20 - Math.random()*fxCanvas.height*0.3, r: 4 + Math.random()*5,
-        vy: 2+Math.random()*3, vx: -1.5 + Math.random()*3, rot: Math.random()*Math.PI, vr: -0.2 + Math.random()*0.4,
-        color: `hsl(${Math.random()*360},90%,60%)`, shape: Math.random()<0.5?'rect':'circ' });
+    stopConfetti(false);               // reset
+    pieces = makePieces(140);
+    confettiActive = true;
+    const now = performance.now();
+    killAt = now + ms;
+
+    const tick = (ts) => {
+      if (!confettiActive || !ctx2d) return;
+
+      clearFxCanvas();
+
+      const timeLeft = Math.max(0, killAt - ts);
+      const alpha = timeLeft <= fadeMs ? (timeLeft / fadeMs) : 1;
+
+      for (const p of pieces){
+        p.vy += 0.015; // gravity
+        p.x += p.vx; p.y += p.vy; p.rot += p.vr;
+
+        // recycle during active phase for steady density
+        if (alpha === 1 && p.y > fxCanvas.height + 20){
+          p.y = -20; p.x = Math.random()*fxCanvas.width;
+        }
+
+        ctx2d.save();
+        ctx2d.globalAlpha = alpha;
+        ctx2d.translate(p.x, p.y);
+        ctx2d.rotate(p.rot);
+        ctx2d.fillStyle = p.color;
+        if (p.shape === 'rect'){ ctx2d.fillRect(-p.r, -p.r, p.r*2, p.r*2); }
+        else { ctx2d.beginPath(); ctx2d.arc(0,0,p.r,0,Math.PI*2); ctx2d.fill(); }
+        ctx2d.restore();
+      }
+
+      if (ts >= killAt){
+        stopConfetti(true);            // end: cancel + clear
+        return;
+      }
+      rafId = requestAnimationFrame(tick);
+    };
+
+    rafId = requestAnimationFrame(tick);
+  }
+
+  // Pause RAF when tab hidden; resume with a small tail if still active
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden){
+      if (rafId) cancelAnimationFrame(rafId);
+    } else if (confettiActive){
+      rafId = requestAnimationFrame((ts)=>confetti(Math.max(350, killAt - ts)));
     }
-    if(!confettiActive){ confettiActive = true; requestAnimationFrame(tick); }
-    setTimeout(()=>{ confettiActive=false; }, ms);
-  }
-  function tick(){
-    if (!ctx2d || !fxCanvas) return;
-    ctx2d.clearRect(0,0,fxCanvas.width,fxCanvas.height);
-    pieces.forEach(p=>{
-      p.x += p.vx; p.y += p.vy; p.rot += p.vr;
-      if (p.y > fxCanvas.height+20) { p.y = -20; p.x = Math.random()*fxCanvas.width; }
-      ctx2d.save(); ctx2d.translate(p.x, p.y); ctx2d.rotate(p.rot); ctx2d.fillStyle = p.color;
-      if (p.shape==='rect'){ ctx2d.fillRect(-p.r, -p.r, p.r*2, p.r*2); } else { ctx2d.beginPath(); ctx2d.arc(0,0,p.r,0,Math.PI*2); ctx2d.fill(); }
-      ctx2d.restore();
-    });
-    if(confettiActive) requestAnimationFrame(tick);
-  }
+  });
+
+  // Toggle FX (also clears if turning off)
   on(toggleFXBtn,"click", ()=>{
-    fxOn = !fxOn; toggleFXBtn.textContent = `FX: ${fxOn? "On":"Off"}`; persist();
+    fxOn = !fxOn;
+    toggleFXBtn.textContent = `FX: ${fxOn? "On":"Off"}`;
+    persist();
     toast(`FX ${fxOn? "enabled":"disabled"}`);
-    if (!fxOn && ctx2d) ctx2d.clearRect(0,0,fxCanvas.width,fxCanvas.height);
+    if (!fxOn) stopConfetti(true);
   });
 
   /* ---- Initial tip ---- */
   respondText("Animations on. Use /week, /policy, /quiz, /break, /swap. Toggle FX in the header.");
 });
-
-/* ===== helpers outside DOMContentLoaded ===== */
-function todayISO(){ return new Date().toISOString().slice(0,10); }
-function offsetDate(days){ const d = new Date(); d.setDate(d.getDate()+days); return d.toISOString().slice(0,10); }

@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>McCrew AI — App</title>
-  <link rel="stylesheet" href="/app/styles.css" />
+  <title>McCrew AI</title>
+  <link rel="stylesheet" href="./styles.css" />
 </head>
 <body>
   <!-- FX canvas (confetti) -->
@@ -15,11 +15,8 @@
       <span class="arch glow">M</span><span>cCrew AI</span>
     </div>
     <div class="spacer"></div>
-    <span id="who" class="ghost" style="border:none;cursor:default"></span>
-    <button id="loginBtn" class="ghost">Login</button>
     <button id="toggleFX" class="ghost">FX: On</button>
     <button id="openAdmin" class="ghost">Admin</button>
-    <button id="logout" class="ghost" style="display:none">Logout</button>
   </header>
 
   <main class="layout fade-in">
@@ -114,11 +111,6 @@
 
   <div id="toasts" class="toasts"></div>
 
-  <!-- Netlify Identity -->
-  <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
-  <script src="/identity.js" defer></script>
-
-  <!-- App -->
-  <script src="/app/app.js" defer></script>
+  <script src="./app.js" defer></script>
 </body>
 </html>

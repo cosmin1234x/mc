@@ -1,64 +1,64 @@
-/* login.js — UI wiring for login.html */
+/* login.js — form wiring for LOGIN (now at root /index.html) */
 document.addEventListener("DOMContentLoaded", () => {
   const qs = (s)=>document.querySelector(s);
-  const signIn = qs("#formSignIn");
-  const signUp = qs("#formSignUp");
+
   const tabIn = qs("#tabSignIn");
   const tabUp = qs("#tabSignUp");
+  const formIn = qs("#formSignIn");
+  const formUp = qs("#formSignUp");
   const siEmail = qs("#siEmail");
-  const siPin = qs("#siPin");
-  const suName = qs("#suName");
+  const siPass  = qs("#siPass");
   const suEmail = qs("#suEmail");
-  const suPin = qs("#suPin");
-  const siErr = qs("#siErr");
-  const suErr = qs("#suErr");
+  const suPass  = qs("#suPass");
+  const siErr   = qs("#siErr");
+  const suErr   = qs("#suErr");
   const remember = qs("#remember");
+
+  const params = new URLSearchParams(location.search);
+  // Default destination after login is the app page
+  const next = params.get("next") || "app.html";
 
   function showForm(which){
     const isIn = which === "in";
     tabIn.classList.toggle("active", isIn);
     tabUp.classList.toggle("active", !isIn);
-    signIn.hidden = !isIn;
-    signUp.hidden = isIn;
-    (isIn ? siEmail : suName).focus();
+    formIn.hidden = !isIn;
+    formUp.hidden = isIn;
+    (isIn ? siEmail : suEmail).focus();
   }
-
   tabIn.addEventListener("click", ()=>showForm("in"));
   tabUp.addEventListener("click", ()=>showForm("up"));
 
-  // Parse ?next=...
-  const params = new URLSearchParams(location.search);
-  const next = params.get("next") || "index.html";
-
-  signIn.addEventListener("submit", async (e)=>{
-    e.preventDefault();
-    siErr.hidden = true; siErr.textContent = "";
+  formIn.addEventListener("submit", async (e)=>{
+    e.preventDefault(); siErr.hidden = true; siErr.textContent = "";
     try{
-      const sess = await McAuth.signIn(siEmail.value.trim(), siPin.value.trim(), !!remember.checked);
-      // success
-      const to = next.replace(/^\/*/, "");
-      location.replace(to);
+      await McAuth.signIn(siEmail.value, siPass.value, !!remember.checked);
+      // go to app.html (or ?next=...)
+      location.replace(next.replace(/^\/*/, ""));
     }catch(err){
-      siErr.hidden = false; siErr.textContent = err.message || "Sign in failed.";
-      siPin.classList.add("shake"); setTimeout(()=>siPin.classList.remove("shake"), 380);
+      siErr.textContent = err.message || "Sign in failed.";
+      siErr.hidden = false;
+      siPass.classList.add("shake"); setTimeout(()=>siPass.classList.remove("shake"), 380);
     }
   });
 
-  signUp.addEventListener("submit", async (e)=>{
-    e.preventDefault();
-    suErr.hidden = true; suErr.textContent = "";
+  formUp.addEventListener("submit", async (e)=>{
+    e.preventDefault(); suErr.hidden = true; suErr.textContent = "";
     try{
-      await McAuth.signUp({ email: suEmail.value.trim(), name: suName.value.trim(), pin: suPin.value.trim(), role: "crew" });
-      // Auto sign-in after sign-up
-      await McAuth.signIn(suEmail.value.trim(), suPin.value.trim(), true);
-      location.replace("index.html");
+      await McAuth.signUp(suEmail.value, suPass.value);
+      await McAuth.signIn(suEmail.value, suPass.value, true);
+      location.replace("app.html");
     }catch(err){
-      suErr.hidden = false; suErr.textContent = err.message || "Could not create account.";
-      suPin.classList.add("shake"); setTimeout(()=>suPin.classList.remove("shake"), 380);
+      suErr.textContent = err.message || "Could not create account.";
+      suErr.hidden = false;
+      suPass.classList.add("shake"); setTimeout(()=>suPass.classList.remove("shake"), 380);
     }
   });
 
-  // Small UX: Enter on email jumps to PIN
-  siEmail.addEventListener("keydown",(e)=>{ if(e.key==="Enter"){ e.preventDefault(); siPin.focus(); }});
-  suName.addEventListener("keydown",(e)=>{ if(e.key==="Enter"){ e.preventDefault(); suEmail.focus(); }});
+  // Enter on email focuses password
+  siEmail.addEventListener("keydown",(e)=>{ if(e.key==="Enter"){ e.preventDefault(); siPass.focus(); }});
+  suEmail.addEventListener("keydown",(e)=>{ if(e.key==="Enter"){ e.preventDefault(); suPass.focus(); }});
+
+  // default view
+  showForm("in");
 });

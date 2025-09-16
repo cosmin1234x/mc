@@ -1,4 +1,4 @@
-/* McCrew AI — Polished + Admin Close Fix + Clean Confetti */
+/* McCrew AI — One-page app (no login) + Admin Close Fix + Smooth Confetti */
 
 /* quiz first to avoid TDZ */
 var quiz = null;
@@ -480,6 +480,4 @@ document.addEventListener("DOMContentLoaded", () => {
 
   /* ---- Initial tip ---- */
   respondText("Animations on. Use /week, /policy, /quiz, /break, /swap. Toggle FX in the header.");
-
-  function toast(msg, type=""){ if(!toasts) return; const el = document.createElement("div"); el.className = `toast ${type}`; el.textContent = msg; toasts.appendChild(el); setTimeout(()=>{ el.classList.add("leave"); setTimeout(()=>el.remove(), 180); }, 2000); }
 });

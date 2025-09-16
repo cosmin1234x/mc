@@ -4,110 +4,24 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Sign in • McCrew AI</title>
-  <link rel="stylesheet" href="styles.css" />
-  <style>
-    /* Center card, reuse brand colors */
-    .login-wrap{min-height:100vh; display:grid; place-items:center; padding:24px}
-    .card{background:#fff; border:1px solid var(--line); border-radius:18px; box-shadow:0 10px 30px rgba(0,0,0,.08); width:min(480px, 92vw)}
-    .card header{padding:16px 18px; border-bottom:1px solid var(--line); background:#fff7df; border-radius:18px 18px 0 0; display:flex; align-items:center; justify-content:space-between}
-    .brand{font-weight:900; display:flex; gap:8px; align-items:center}
-    .brand .arch{color:#000; background:var(--mc-gold); font-size:20px; border-radius:8px; padding:0 9px}
-    .tabs{display:flex; gap:6px}
-    .tabs button{border:1px solid var(--line); background:#fff; border-radius:999px; padding:6px 12px; cursor:pointer}
-    .tabs button.active{background:#fff2cc; border-color:#ffe18a}
-    .body{padding:18px}
-    form{display:grid; gap:10px}
-    label{font-size:13px; color:#555}
-    input[type="email"], input[type="password"], input[type="text"]{
-      padding:12px; border-radius:12px; border:1px solid var(--line); background:#fff; color:var(--text);
-      transition:box-shadow .2s, border-color .2s;
-    }
-    input:focus{outline:none; border-color:#ffd35a; box-shadow:0 0 0 4px rgba(255,199,44,.25)}
-    .row{display:flex; gap:8px}
-    .row > *{flex:1}
-    .actions{display:flex; justify-content:space-between; align-items:center; gap:8px}
-    .send{padding:10px 14px; border-radius:12px; border:0; color:#1a1a1a; font-weight:900; cursor:pointer; background:linear-gradient(90deg,var(--mc-gold), var(--mc-gold-2), var(--mc-red)); background-size:200% 100%; animation:btnflow 4s linear infinite; }
-    .hint{font-size:12px; color:#6a6f78}
-    .error{color:#b00020; font-size:13px}
-    .foot-note{padding:12px 18px; border-top:1px solid var(--line); background:#fffaf2; border-radius:0 0 18px 18px; font-size:12px; color:#6a6f78}
-  </style>
+  <link rel="stylesheet" href="/login.css" />
 </head>
 <body>
-  <div id="toasts" class="toasts"></div>
-
-  <div class="login-wrap">
+  <div class="wrap">
     <div class="card">
-      <header>
-        <div class="brand">
-          <span class="arch">M</span><span>cCrew AI</span>
-        </div>
-        <div class="tabs">
-          <button id="tabSignIn" class="active" type="button">Sign in</button>
-          <button id="tabSignUp" type="button">Create account</button>
-        </div>
+      <header class="card-head">
+        <div class="brand"><span class="arch">M</span><span>cCrew AI</span></div>
       </header>
-
-      <div class="body">
-        <!-- Sign in -->
-        <form id="formSignIn" autocomplete="on">
-          <div class="row">
-            <div>
-              <label for="siEmail">Email</label>
-              <input id="siEmail" type="email" placeholder="you@store.local" required />
-            </div>
-          </div>
-          <div class="row">
-            <div>
-              <label for="siPin">PIN (4–6 digits)</label>
-              <input id="siPin" type="password" inputmode="numeric" pattern="\\d{4,6}" placeholder="e.g. 4321" required />
-            </div>
-          </div>
-          <div class="actions">
-            <label style="display:flex;align-items:center;gap:6px">
-              <input id="remember" type="checkbox" /> Remember me
-            </label>
-            <button class="send" type="submit">Sign in</button>
-          </div>
-          <p id="siErr" class="error" hidden></p>
-          <p class="hint">Demo only: first run seeds <code>admin@store.local</code> / <code>4321</code>.</p>
-        </form>
-
-        <!-- Sign up -->
-        <form id="formSignUp" autocomplete="off" hidden>
-          <div class="row">
-            <div>
-              <label for="suName">Your name</label>
-              <input id="suName" type="text" placeholder="Alex Crew" required />
-            </div>
-          </div>
-          <div class="row">
-            <div>
-              <label for="suEmail">Email</label>
-              <input id="suEmail" type="email" placeholder="you@store.local" required />
-            </div>
-          </div>
-          <div class="row">
-            <div>
-              <label for="suPin">Choose PIN (4–6 digits)</label>
-              <input id="suPin" type="password" inputmode="numeric" pattern="\\d{4,6}" placeholder="e.g. 1234" required />
-            </div>
-          </div>
-          <div class="actions">
-            <span></span>
-            <button class="send" type="submit">Create account</button>
-          </div>
-          <p id="suErr" class="error" hidden></p>
-          <p class="hint">New accounts get role <b>crew</b>. You can edit roles later by seeding another admin in storage.</p>
-        </form>
-      </div>
-
-      <div class="foot-note">
-        For production, use a real auth provider (e.g., Netlify Identity, Supabase, or Firebase). This demo keeps data in your browser only.
-      </div>
+      <section class="card-body">
+        <p>Welcome! Please sign in to continue.</p>
+        <button class="btn" id="loginBtn" type="button">Open Sign-in</button>
+        <p class="hint">Admins: assign the <b>admin</b> role in Netlify → Identity → Users.</p>
+      </section>
     </div>
   </div>
 
-  <script src="session.js" defer></script>
-  <script src="login.js" defer></script>
+  <!-- Netlify Identity (public) -->
+  <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+  <script src="/identity.js" defer></script>
 </body>
 </html>

@@ -1,0 +1,10 @@
+# Public pages/assets
+/login.html                          /login.html                    200
+/identity.js                         /identity.js                   200
+/login.css                           /login.css                     200
+/assets/*                            /assets/:splat                 200
+
+# Gate the app at the CDN by role (crew or admin)
+# Authenticated users hit the SPA entry point; others get 401 -> login
+/app/*                               /app/index.html                200!  Role=crew,admin
+/app/*                               /login.html                    401!

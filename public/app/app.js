@@ -1,4 +1,4 @@
-/* McCrew AI — Polished + Animations + Admin Close Fix + Clean Confetti */
+/* McCrew AI — Polished + Admin Close Fix + Clean Confetti */
 
 /* quiz first to avoid TDZ */
 var quiz = null;
@@ -87,7 +87,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const escapeHTML = (s)=> s.replace(/[&<>"']/g, m=>({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;" }[m]));
 
   /* ---- Persistence ---- */
-  const LS_KEY = "mccrew_ai_polished_v3";
+  const LS_KEY = "mccrew_ai_polished_v4";
   let fxOn = true;
   try{
     const raw = localStorage.getItem(LS_KEY);
@@ -108,7 +108,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const openAdminBtn = document.getElementById("openAdmin");
   const adminModal = document.getElementById("adminModal");
-  const closeAdminBtn = document.getElementById("closeAdmin"); // explicit close button
+  const closeAdminBtn = document.getElementById("closeAdmin");
   const aEmpId = document.getElementById("aEmpId");
   const aName  = document.getElementById("aName");
   const aRate  = document.getElementById("aRate");
@@ -123,10 +123,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const toggleFXBtn = document.getElementById("toggleFX");
 
   const on = (el, ev, fn)=> el && el.addEventListener ? el.addEventListener(ev, fn) : warn(`skip ${ev}`);
-  const has = (el, id)=>{ if(!el) warn(`Missing #${id}`); return !!el; };
 
   /* ---- Render KB ---- */
-  if (has(kbList,"kbList")){
+  if (kbList){
     KB.forEach(item=>{
       const li = document.createElement("li");
       li.textContent = item.topic;
@@ -138,7 +137,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  /* ---- Ripple + shine on quicks ---- */
+  /* ---- Ripple for quicks ---- */
   document.querySelectorAll(".quick, .chip").forEach(btn=>{
     on(btn,"click",(e)=>{
       const r = btn.getBoundingClientRect();
@@ -153,9 +152,9 @@ document.addEventListener("DOMContentLoaded", () => {
     adminModal?.showModal?.();
     renderEmpTable(); initPayConfigFields();
   });
-  on(closeAdminBtn,"click", ()=> adminModal?.close?.());               // Close button
-  on(adminModal,"cancel", (e)=>{ e.preventDefault(); adminModal.close(); }); // Esc key
-  on(adminModal,"click", (e)=>{                                      // Backdrop click
+  on(closeAdminBtn,"click", ()=> adminModal?.close?.());
+  on(adminModal,"cancel", (e)=>{ e.preventDefault(); adminModal.close(); });
+  on(adminModal,"click", (e)=>{
     const r = adminModal.getBoundingClientRect();
     const outside = e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom;
     if (outside) adminModal.close();
@@ -427,115 +426,60 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   /* ---- Confetti FX (toggleable, fade + auto-clear) ---- */
-  let confettiActive = false;
-  let pieces = [];
-  let rafId = 0;
-  let killAt = 0;
-  let fadeMs = 350; // fade-out duration
-
+  let confettiActive = false, pieces = [], rafId = 0, killAt = 0;
+  const fadeMs = 350;
   const ctx2d = fxCanvas?.getContext?.('2d');
-  function resizeFx(){
-    if(!fxCanvas) return;
-    fxCanvas.width = innerWidth;
-    fxCanvas.height = innerHeight;
-  }
-  addEventListener('resize', resizeFx);
-  resizeFx();
 
-  function clearFxCanvas(){
-    if (ctx2d && fxCanvas) ctx2d.clearRect(0,0,fxCanvas.width,fxCanvas.height);
-  }
+  function resizeFx(){ if(!fxCanvas) return; fxCanvas.width = innerWidth; fxCanvas.height = innerHeight; }
+  addEventListener('resize', resizeFx); resizeFx();
 
+  function clearFxCanvas(){ if (ctx2d && fxCanvas) ctx2d.clearRect(0,0,fxCanvas.width,fxCanvas.height); }
   function stopConfetti(clear=true){
-    confettiActive = false;
-    if (rafId) cancelAnimationFrame(rafId);
-    rafId = 0;
-    if (clear) clearFxCanvas();
-    pieces.length = 0;
+    confettiActive = false; if (rafId) cancelAnimationFrame(rafId); rafId = 0;
+    if (clear) clearFxCanvas(); pieces.length = 0;
   }
-
   function makePieces(n){
     const arr = [];
     for (let i=0;i<n;i++){
-      arr.push({
-        x: Math.random()*fxCanvas.width,
-        y: -20 - Math.random()*fxCanvas.height*0.25,
-        r: 4 + Math.random()*5,
-        vy: 2 + Math.random()*3,
-        vx: -1.2 + Math.random()*2.4,
-        rot: Math.random()*Math.PI,
-        vr: -0.25 + Math.random()*0.5,
-        color: `hsl(${Math.random()*360},90%,60%)`,
-        shape: Math.random()<0.5 ? 'rect' : 'circ'
-      });
+      arr.push({ x: Math.random()*fxCanvas.width, y: -20 - Math.random()*fxCanvas.height*0.25, r: 4 + Math.random()*5,
+        vy: 2 + Math.random()*3, vx: -1.2 + Math.random()*2.4, rot: Math.random()*Math.PI, vr: -0.25 + Math.random()*0.5,
+        color: `hsl(${Math.random()*360},90%,60%)`, shape: Math.random()<0.5 ? 'rect' : 'circ' });
     }
     return arr;
   }
-
-  /** Fire confetti for ms milliseconds. Smoothly fades out and clears canvas. */
   function confetti(ms=1000){
     if (!fxOn || !ctx2d || !fxCanvas) return;
-    stopConfetti(false);               // reset
-    pieces = makePieces(140);
-    confettiActive = true;
-    const now = performance.now();
-    killAt = now + ms;
+    stopConfetti(false); pieces = makePieces(140); confettiActive = true;
+    const now = performance.now(); killAt = now + ms;
 
     const tick = (ts) => {
       if (!confettiActive || !ctx2d) return;
-
       clearFxCanvas();
-
       const timeLeft = Math.max(0, killAt - ts);
       const alpha = timeLeft <= fadeMs ? (timeLeft / fadeMs) : 1;
-
       for (const p of pieces){
-        p.vy += 0.015; // gravity
-        p.x += p.vx; p.y += p.vy; p.rot += p.vr;
-
-        // recycle during active phase for steady density
-        if (alpha === 1 && p.y > fxCanvas.height + 20){
-          p.y = -20; p.x = Math.random()*fxCanvas.width;
-        }
-
-        ctx2d.save();
-        ctx2d.globalAlpha = alpha;
-        ctx2d.translate(p.x, p.y);
-        ctx2d.rotate(p.rot);
-        ctx2d.fillStyle = p.color;
-        if (p.shape === 'rect'){ ctx2d.fillRect(-p.r, -p.r, p.r*2, p.r*2); }
-        else { ctx2d.beginPath(); ctx2d.arc(0,0,p.r,0,Math.PI*2); ctx2d.fill(); }
+        p.vy += 0.015; p.x += p.vx; p.y += p.vy; p.rot += p.vr;
+        if (alpha === 1 && p.y > fxCanvas.height + 20){ p.y = -20; p.x = Math.random()*fxCanvas.width; }
+        ctx2d.save(); ctx2d.globalAlpha = alpha; ctx2d.translate(p.x, p.y); ctx2d.rotate(p.rot); ctx2d.fillStyle = p.color;
+        if (p.shape === 'rect'){ ctx2d.fillRect(-p.r, -p.r, p.r*2, p.r*2); } else { ctx2d.beginPath(); ctx2d.arc(0,0,p.r,0,Math.PI*2); ctx2d.fill(); }
         ctx2d.restore();
       }
-
-      if (ts >= killAt){
-        stopConfetti(true);            // end: cancel + clear
-        return;
-      }
+      if (ts >= killAt){ stopConfetti(true); return; }
       rafId = requestAnimationFrame(tick);
     };
-
     rafId = requestAnimationFrame(tick);
   }
-
-  // Pause RAF when tab hidden; resume with a small tail if still active
   document.addEventListener('visibilitychange', () => {
-    if (document.hidden){
-      if (rafId) cancelAnimationFrame(rafId);
-    } else if (confettiActive){
-      rafId = requestAnimationFrame((ts)=>confetti(Math.max(350, killAt - ts)));
-    }
+    if (document.hidden){ if (rafId) cancelAnimationFrame(rafId); }
+    else if (confettiActive){ rafId = requestAnimationFrame((ts)=>confetti(Math.max(350, killAt - ts))); }
   });
-
-  // Toggle FX (also clears if turning off)
   on(toggleFXBtn,"click", ()=>{
-    fxOn = !fxOn;
-    toggleFXBtn.textContent = `FX: ${fxOn? "On":"Off"}`;
-    persist();
-    toast(`FX ${fxOn? "enabled":"disabled"}`);
-    if (!fxOn) stopConfetti(true);
+    fxOn = !fxOn; toggleFXBtn.textContent = `FX: ${fxOn? "On":"Off"}`; persist();
+    toast(`FX ${fxOn? "enabled":"disabled"}`); if (!fxOn) stopConfetti(true);
   });
 
   /* ---- Initial tip ---- */
   respondText("Animations on. Use /week, /policy, /quiz, /break, /swap. Toggle FX in the header.");
+
+  function toast(msg, type=""){ if(!toasts) return; const el = document.createElement("div"); el.className = `toast ${type}`; el.textContent = msg; toasts.appendChild(el); setTimeout(()=>{ el.classList.add("leave"); setTimeout(()=>el.remove(), 180); }, 2000); }
 });

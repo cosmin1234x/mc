@@ -1,99 +1,11 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Sign in • McCrew AI</title>
-  <link rel="stylesheet" href="./styles.css" />
-  <style>
-    .login-wrap{min-height:100vh; display:grid; place-items:center; padding:24px}
-    .card{background:#fff; border:1px solid var(--line); border-radius:18px; box-shadow:0 10px 30px rgba(0,0,0,.08); width:min(480px, 92vw); overflow:hidden}
-    .card header{padding:16px 18px; border-bottom:1px solid var(--line); background:#fff7df}
-    .brand{font-weight:900; display:flex; gap:8px; align-items:center}
-    .arch{background:var(--mc-gold); color:#000; font-size:20px; border-radius:8px; padding:0 9px}
-    .body{padding:18px; display:grid; gap:10px}
-    label{font-size:13px; color:#555}
-    input[type="email"], input[type="password"]{padding:12px; border-radius:12px; border:1px solid var(--line); background:#fff; color:var(--text); transition:box-shadow .2s, border-color .2s}
-    input:focus{outline:none; border-color:#ffd35a; box-shadow:0 0 0 4px rgba(255,199,44,.25)}
-    .row{display:flex; gap:8px}
-    .row > *{flex:1}
-    .tabs{display:flex; gap:6px; padding:0 18px 4px}
-    .tabs button{border:1px solid var(--line); background:#fff; border-radius:999px; padding:6px 12px; cursor:pointer}
-    .tabs button.active{background:#fff2cc; border-color:#ffe18a}
-    .actions{display:flex; justify-content:space-between; align-items:center; gap:8px}
-    .send{padding:12px 16px; border-radius:12px; border:0; color:#1a1a1a; font-weight:900; cursor:pointer; background:linear-gradient(90deg,var(--mc-gold), var(--mc-gold-2), var(--mc-red)); background-size:200% 100%; animation:btnflow 4s linear infinite; box-shadow:0 6px 16px rgba(218,41,28,.18)}
-    .hint{font-size:12px; color:#6a6f78}
-    .error{color:#b00020; font-size:13px}
-  </style>
-</head>
-<body>
-  <div id="toasts" class="toasts"></div>
-
-  <div class="login-wrap">
-    <div class="card">
-      <header>
-        <div class="brand"><span class="arch">M</span><span>cCrew AI</span></div>
-      </header>
-
-      <div class="tabs">
-        <button id="tabSignIn" class="active" type="button">Sign in</button>
-        <button id="tabSignUp" type="button">Create account</button>
-      </div>
-
-      <div class="body">
-        <!-- Sign in -->
-        <form id="formSignIn" autocomplete="on">
-          <div class="row">
-            <div>
-              <label for="siEmail">Email</label>
-              <input id="siEmail" type="email" placeholder="you@store.local" required />
-            </div>
-          </div>
-          <div class="row">
-            <div>
-              <label for="siPass">Password</label>
-              <input id="siPass" type="password" placeholder="••••••••" required />
-            </div>
-          </div>
-          <div class="actions">
-            <label style="display:flex;align-items:center;gap:6px">
-              <input id="remember" type="checkbox" /> Remember me
-            </label>
-            <button class="send" type="submit">Sign in</button>
-          </div>
-          <p id="siErr" class="error" hidden></p>
-          <p class="hint">Demo seeded user: <code>demo@store.local</code> / <code>pass1234</code></p>
-        </form>
-
-        <!-- Sign up -->
-        <form id="formSignUp" autocomplete="off" hidden>
-          <div class="row">
-            <div>
-              <label for="suEmail">Email</label>
-              <input id="suEmail" type="email" placeholder="you@store.local" required />
-            </div>
-          </div>
-          <div class="row">
-            <div>
-              <label for="suPass">Password (min 6)</label>
-              <input id="suPass" type="password" placeholder="at least 6 chars" minlength="6" required />
-            </div>
-          </div>
-          <div class="actions">
-            <span></span>
-            <button class="send" type="submit">Create account</button>
-          </div>
-          <p id="suErr" class="error" hidden></p>
-        </form>
-      </div>
-
-      <div class="foot-note" style="padding:12px 18px; border-top:1px solid var(--line); background:#fffaf2; font-size:12px; color:#6a6f78">
-        Demo only — users & sessions are stored in your browser. Use a real backend for production.
-      </div>
-    </div>
-  </div>
-
-  <script src="./auth.js" defer></script>
-  <script src="./login.js" defer></script>
-</body>
+<html>
+  <head>
+    <title>Site Under Maintenance</title>
+    <meta charset="utf-8" />
+  </head>
+  <body style="text-align:center; font-family:sans-serif;">
+    <h1>🔒 Site Temporarily Offline</h1>
+    <p>We’ll be back soon!</p>
+  </body>
 </html>

@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>McCrew AI</title>
+  <title>McCrew AI — App</title>
   <link rel="stylesheet" href="./styles.css" />
 </head>
 <body>
@@ -15,8 +15,10 @@
       <span class="arch glow">M</span><span>cCrew AI</span>
     </div>
     <div class="spacer"></div>
+    <span id="who" class="ghost" style="border:none;cursor:default"></span>
     <button id="toggleFX" class="ghost">FX: On</button>
     <button id="openAdmin" class="ghost">Admin</button>
+    <button id="logout" class="ghost" style="display:none">Logout</button>
   </header>
 
   <main class="layout fade-in">
@@ -111,6 +113,27 @@
 
   <div id="toasts" class="toasts"></div>
 
+  <!-- Netlify Identity (GoTrue) and auth glue -->
+  <script src="https://cdn.jsdelivr.net/npm/gotrue-js@1/dist/gotrue.min.js"></script>
+  <script src="./auth-netlify.js"></script>
+  <script>
+    // Guard this page; fill header with user email; wire logout
+    document.addEventListener("DOMContentLoaded", async () => {
+      const user = await NF.requireAuth("/"); // if not logged in, go to login (root)
+
+      if (user) {
+        const who = document.getElementById("who");
+        const logoutBtn = document.getElementById("logout");
+        if (who) who.textContent = user.email;
+        if (logoutBtn) {
+          logoutBtn.style.display = "inline-block";
+          logoutBtn.onclick = (e) => { e.preventDefault(); NF.signOut("/"); };
+        }
+      }
+    });
+  </script>
+
+  <!-- Your app logic -->
   <script src="./app.js" defer></script>
 </body>
 </html>

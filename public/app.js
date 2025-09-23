@@ -478,6 +478,5 @@ document.addEventListener("DOMContentLoaded", () => {
     toast(`FX ${fxOn? "enabled":"disabled"}`); if (!fxOn) stopConfetti(true);
   });
 
-  /* ---- Initial tip ---- */
   respondText("Animations on. Use /week, /policy, /quiz, /break, /swap. Toggle FX in the header.");
 });

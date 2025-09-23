@@ -1,4 +1,4 @@
-/* login.js — form wiring for LOGIN (now at root /index.html) */
+/* login.js — custom forms using Netlify Identity (GoTrue) via NF.auth */
 document.addEventListener("DOMContentLoaded", () => {
   const qs = (s)=>document.querySelector(s);
 
@@ -15,50 +15,52 @@ document.addEventListener("DOMContentLoaded", () => {
   const remember = qs("#remember");
 
   const params = new URLSearchParams(location.search);
-  // Default destination after login is the app page
   const next = params.get("next") || "app.html";
 
-  function showForm(which){
-    const isIn = which === "in";
-    tabIn.classList.toggle("active", isIn);
-    tabUp.classList.toggle("active", !isIn);
-    formIn.hidden = !isIn;
-    formUp.hidden = isIn;
-    (isIn ? siEmail : suEmail).focus();
+  function show(which){
+    const signIn = which === "in";
+    tabIn.classList.toggle("active", signIn);
+    tabUp.classList.toggle("active", !signIn);
+    formIn.hidden = !signIn;
+    formUp.hidden = signIn;
+    (signIn ? siEmail : suEmail).focus();
   }
-  tabIn.addEventListener("click", ()=>showForm("in"));
-  tabUp.addEventListener("click", ()=>showForm("up"));
+  tabIn.addEventListener("click", ()=>show("in"));
+  tabUp.addEventListener("click", ()=>show("up"));
+  show("in");
 
   formIn.addEventListener("submit", async (e)=>{
-    e.preventDefault(); siErr.hidden = true; siErr.textContent = "";
+    e.preventDefault();
+    siErr.hidden = true; siErr.textContent = "";
     try{
-      await McAuth.signIn(siEmail.value, siPass.value, !!remember.checked);
-      // go to app.html (or ?next=...)
-      location.replace(next.replace(/^\/*/, ""));
+      await NF.auth.login(siEmail.value.trim(), siPass.value, !!remember.checked);
+      location.replace(next.replace(/^\/*/,""));
     }catch(err){
-      siErr.textContent = err.message || "Sign in failed.";
+      // Common errors: bad credentials, email confirmation required, registration closed
+      siErr.textContent = (err && err.message) ? err.message : "Sign in failed. Check your email/password or Identity settings.";
       siErr.hidden = false;
       siPass.classList.add("shake"); setTimeout(()=>siPass.classList.remove("shake"), 380);
     }
   });
 
   formUp.addEventListener("submit", async (e)=>{
-    e.preventDefault(); suErr.hidden = true; suErr.textContent = "";
+    e.preventDefault();
+    suErr.hidden = true; suErr.textContent = "";
     try{
-      await McAuth.signUp(suEmail.value, suPass.value);
-      await McAuth.signIn(suEmail.value, suPass.value, true);
-      location.replace("app.html");
+      await NF.auth.signup(suEmail.value.trim(), suPass.value);
+      // If email verification is on, login will fail until confirmed
+      try{
+        await NF.auth.login(suEmail.value.trim(), suPass.value, true);
+        location.replace("app.html");
+      }catch(e2){
+        suErr.textContent = "Account created. Please verify your email, then sign in.";
+        suErr.hidden = false;
+        show("in");
+      }
     }catch(err){
-      suErr.textContent = err.message || "Could not create account.";
+      suErr.textContent = (err && err.message) ? err.message : "Could not create account (maybe email already registered?).";
       suErr.hidden = false;
       suPass.classList.add("shake"); setTimeout(()=>suPass.classList.remove("shake"), 380);
     }
   });
-
-  // Enter on email focuses password
-  siEmail.addEventListener("keydown",(e)=>{ if(e.key==="Enter"){ e.preventDefault(); siPass.focus(); }});
-  suEmail.addEventListener("keydown",(e)=>{ if(e.key==="Enter"){ e.preventDefault(); suPass.focus(); }});
-
-  // default view
-  showForm("in");
 });

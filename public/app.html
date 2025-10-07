@@ -121,22 +121,13 @@
 
   <div id="toasts" class="toasts" aria-live="polite" aria-relevant="additions"></div>
 
-  <!-- 1) GoTrue global (UMD) + ESM fallback -->
-  <script defer src="https://cdn.jsdelivr.net/npm/gotrue-js@1/dist/umd/gotrue.min.js"
-          onerror="window.__gotrue_umdfail = true"></script>
-  <script type="module">
-    if (!window.GoTrue) {
-      try {
-        const mod = await import('https://unpkg.com/gotrue-js@1?module');
-        window.GoTrue = mod.default || mod.GoTrue || mod;
-      } catch (e) { console.error('GoTrue ESM fallback failed:', e); }
-    }
-  </script>
+<!-- Netlify Identity Widget (bundles GoTrue) -->
+<script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
 
-  <!-- 2) Netlify glue (creates window.NF) -->
-  <script defer src="./auth-netlify.js"></script>
+<!-- Our glue that builds window.NF on top of the widget -->
+<script defer src="./auth-netlify.js"></script>
 
-  <!-- 3) App logic -->
-  <script defer src="./app.js"></script>
+<!-- Page logic -->
+<script defer src="./login.js"></script>
 </body>
 </html>

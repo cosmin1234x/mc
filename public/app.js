@@ -256,7 +256,8 @@ document.addEventListener("DOMContentLoaded", () => {
       if (idx !== -1){
         const mapped = idx % 3;
         const curr = QUIZ_QUESTIONS[quiz.idx];
-        const ok = mapped === curr.correct;
+        theOk = mapped === curr.correct;
+        const ok = theOk;
         if (ok) beep(880,120,'triangle'); else beep(220,160,'sawtooth');
         respondHTML(`<p><b>${ok? "✅ Correct":"❌ Not quite"}</b> — ${escapeHTML(curr.a[curr.correct])}</p>`,140);
         if (ok) quiz.score++;

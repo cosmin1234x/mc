@@ -2,104 +2,112 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#ffc000" />
+  <meta name="color-scheme" content="light dark" />
   <title>McCrew AI — App</title>
   <link rel="stylesheet" href="./styles.css" />
 </head>
 <body>
   <!-- FX canvas (confetti) -->
-  <canvas id="fx" class="fx"></canvas>
+  <canvas id="fx" class="fx" aria-hidden="true"></canvas>
 
-  <header class="topbar">
-    <div class="brand">
-      <span class="arch glow">M</span><span>cCrew AI</span>
+  <header class="topbar" role="banner">
+    <div class="brand" aria-label="McCrew AI">
+      <span class="arch glow" aria-hidden="true">M</span><span>cCrew AI</span>
     </div>
-    <div class="spacer"></div>
-    <span id="who" class="ghost" style="border:none;cursor:default"></span>
-    <button id="toggleFX" class="ghost">FX: On</button>
-    <button id="openAdmin" class="ghost">Admin</button>
-    <button id="logout" class="ghost" style="display:none">Logout</button>
+    <div class="spacer" aria-hidden="true"></div>
+
+    <span id="who" class="ghost" style="border:none;cursor:default" aria-live="polite"></span>
+    <button id="toggleFX" class="ghost" type="button" aria-pressed="true">FX: On</button>
+    <button id="openAdmin" class="ghost" type="button" aria-haspopup="dialog" aria-controls="adminModal">Admin</button>
+    <button id="logout" class="ghost" type="button" style="display:none">Logout</button>
   </header>
 
-  <main class="layout fade-in">
+  <main class="layout fade-in" role="main">
     <!-- Left: quick actions -->
-    <aside class="panel">
+    <aside class="panel" aria-label="Quick actions and tools">
       <h2>Quick Actions</h2>
-      <div class="quick-grid">
-        <button class="quick pulse" data-msg="/shift">Today’s Shift</button>
-        <button class="quick pulse" data-msg="/pay">Today’s Pay</button>
-        <button class="quick pulse" data-msg="/nextpay">Next Paycheck</button>
-        <button class="quick" data-msg="/week">This Week</button>
-        <button class="quick" data-msg="/quiz start">Training Quiz</button>
-        <button class="quick" data-msg="/break 20">Start 20-min Break</button>
-        <button class="quick" data-msg="/policy uniform">Find Policy: Uniform</button>
-        <button class="quick" data-msg="/policy allergen">Find Policy: Allergen</button>
+      <div class="quick-grid" role="group" aria-label="Common commands">
+        <button class="quick pulse" data-msg="/shift" type="button">Today’s Shift</button>
+        <button class="quick pulse" data-msg="/pay" type="button">Today’s Pay</button>
+        <button class="quick pulse" data-msg="/nextpay" type="button">Next Paycheck</button>
+        <button class="quick" data-msg="/week" type="button">This Week</button>
+        <button class="quick" data-msg="/quiz start" type="button">Training Quiz</button>
+        <button class="quick" data-msg="/break 20" type="button">Start 20-min Break</button>
+        <button class="quick" data-msg="/policy uniform" type="button">Find Policy: Uniform</button>
+        <button class="quick" data-msg="/policy allergen" type="button">Find Policy: Allergen</button>
       </div>
 
       <div class="id-card">
         <label for="empId">Your Employee ID</label>
-        <input id="empId" placeholder="e.g. 1234" />
-        <small>Used for shift & pay lookups (demo data).</small>
+        <input id="empId" inputmode="numeric" autocomplete="off" placeholder="e.g. 1234" aria-describedby="empHelp" />
+        <small id="empHelp">Used for shift &amp; pay lookups (demo data).</small>
       </div>
 
-      <div class="suggestions">
+      <div class="suggestions" role="group" aria-label="Suggestions">
         <span>Try:</span>
-        <button class="chip" data-msg="Show fryer filtering checklist">fryer checklist</button>
-        <button class="chip" data-msg="/swap 2025-09-10 12:00-20:00 Need to swap for appointment">request swap</button>
-        <button class="chip" data-msg="/swaps">view swap board</button>
+        <button class="chip" data-msg="Show fryer filtering checklist" type="button">fryer checklist</button>
+        <button class="chip" data-msg="/swap 2025-09-10 12:00-20:00 Need to swap for appointment" type="button">request swap</button>
+        <button class="chip" data-msg="/swaps" type="button">view swap board</button>
       </div>
 
       <div class="kb-topics">
         <h3>Knowledge Topics</h3>
-        <ul id="kbList"></ul>
+        <ul id="kbList" aria-live="polite"></ul>
       </div>
     </aside>
 
     <!-- Right: chat -->
-    <section class="chat">
-      <div id="chatLog" class="chat-log">
+    <section class="chat" aria-label="Chat with McCrew AI">
+      <div id="chatLog" class="chat-log" role="log" aria-live="polite" aria-relevant="additions">
         <div class="bot msg slide-in">
-          <p>Welcome to <b>McCrew AI</b>. Ask me about rules, training, shifts & pay.</p>
+          <p>Welcome to <b>McCrew AI</b>. Ask me about rules, training, shifts &amp; pay.</p>
           <p>Commands: <code>/help</code>, <code>/shift</code>, <code>/week</code>, <code>/pay</code>, <code>/nextpay</code>, <code>/policy &lt;term&gt;</code>, <code>/quiz start</code>, <code>/break 20</code>, <code>/swap &lt;date time-range note&gt;</code>, <code>/swaps</code>.</p>
         </div>
       </div>
 
-      <form id="chatForm" class="chat-input">
+      <form id="chatForm" class="chat-input" autocomplete="off">
+        <label for="chatText" class="visually-hidden">Message</label>
         <input id="chatText" placeholder="Type /help or ask a rule…" autocomplete="off" />
         <button type="submit" class="send">Send</button>
       </form>
     </section>
   </main>
 
-  <!-- Admin -->
-  <dialog id="adminModal">
+  <!-- Admin Panel -->
+  <dialog id="adminModal" aria-label="Admin • Demo Data">
     <form method="dialog" class="admin">
       <header>
         <h3>Admin • Demo Data</h3>
-        <button id="closeAdmin" type="button" class="ghost">Close</button>
+        <button id="closeAdmin" type="button" class="ghost" value="cancel" aria-label="Close admin panel">Close</button>
       </header>
 
       <section>
         <h4>Employees</h4>
         <div class="row">
-          <input id="aEmpId" placeholder="ID e.g. 1234" />
-          <input id="aName" placeholder="Name e.g. Alex" />
-          <input id="aRate" type="number" step="0.01" placeholder="Hourly £ e.g. 11.50" />
+          <label class="visually-hidden" for="aEmpId">Employee ID</label>
+          <input id="aEmpId" placeholder="ID e.g. 1234" inputmode="numeric" autocomplete="off" />
+          <label class="visually-hidden" for="aName">Name</label>
+          <input id="aName" placeholder="Name e.g. Alex" autocomplete="name" />
+          <label class="visually-hidden" for="aRate">Hourly rate</label>
+          <input id="aRate" type="number" step="0.01" placeholder="Hourly £ e.g. 11.50" inputmode="decimal" />
           <button id="addEmp" type="button">Add/Update</button>
         </div>
-        <div id="empTable"></div>
+        <div id="empTable" role="region" aria-label="Employee table"></div>
       </section>
 
       <section>
         <h4>Pay Period</h4>
         <div class="row">
-          <label>Frequency</label>
+          <label for="payFreq">Frequency</label>
           <select id="payFreq">
             <option value="weekly">Weekly</option>
             <option value="biweekly">Bi-weekly</option>
             <option value="monthly">Monthly</option>
           </select>
-          <label>Next payday</label>
+
+          <label for="nextPayday">Next payday</label>
           <input id="nextPayday" type="date" />
           <button id="savePayConfig" type="button">Save</button>
         </div>
@@ -107,33 +115,28 @@
     </form>
   </dialog>
 
-  <footer class="foot">
-    <small>Demo only. Replace mock data & KB with your store/company sources.</small>
+  <footer class="foot" role="contentinfo">
+    <small>Demo only. Replace mock data &amp; KB with your store/company sources.</small>
   </footer>
 
-  <div id="toasts" class="toasts"></div>
+  <div id="toasts" class="toasts" aria-live="polite" aria-relevant="additions"></div>
 
-  <!-- Netlify Identity (GoTrue) and auth glue -->
-  <script src="https://cdn.jsdelivr.net/npm/gotrue-js@1/dist/gotrue.min.js"></script>
-  <script src="./auth-netlify.js"></script>
-  <script>
-    // Guard this page; fill header with user email; wire logout
-    document.addEventListener("DOMContentLoaded", async () => {
-      const user = await NF.requireAuth("/"); // if not logged in, go to login (root)
-
-      if (user) {
-        const who = document.getElementById("who");
-        const logoutBtn = document.getElementById("logout");
-        if (who) who.textContent = user.email;
-        if (logoutBtn) {
-          logoutBtn.style.display = "inline-block";
-          logoutBtn.onclick = (e) => { e.preventDefault(); NF.signOut("/"); };
-        }
-      }
-    });
+  <!-- 1) GoTrue global (UMD) + ESM fallback -->
+  <script defer src="https://cdn.jsdelivr.net/npm/gotrue-js@1/dist/umd/gotrue.min.js"
+          onerror="window.__gotrue_umdfail = true"></script>
+  <script type="module">
+    if (!window.GoTrue) {
+      try {
+        const mod = await import('https://unpkg.com/gotrue-js@1?module');
+        window.GoTrue = mod.default || mod.GoTrue || mod;
+      } catch (e) { console.error('GoTrue ESM fallback failed:', e); }
+    }
   </script>
 
-  <!-- Your app logic -->
-  <script src="./app.js" defer></script>
+  <!-- 2) Netlify glue (creates window.NF) -->
+  <script defer src="./auth-netlify.js"></script>
+
+  <!-- 3) App logic -->
+  <script defer src="./app.js"></script>
 </body>
 </html>

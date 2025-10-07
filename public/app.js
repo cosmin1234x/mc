@@ -1,6 +1,19 @@
-/* McCrew AI — One-page app (no login) + Admin Close Fix + Smooth Confetti */
+// --- Netlify Identity session guard ---
+document.addEventListener("DOMContentLoaded", async () => {
+  if (typeof NF === "undefined" || !NF.requireAuth) return;
+  const user = await NF.requireAuth("/"); // redirect to login if needed
+  if (user) {
+    const who = document.getElementById("who");
+    const logoutBtn = document.getElementById("logout");
+    if (who) who.textContent = user.email;
+    if (logoutBtn) {
+      logoutBtn.style.display = "inline-block";
+      logoutBtn.onclick = (e) => { e.preventDefault(); NF.signOut("/"); };
+    }
+  }
+});
 
-/* quiz first to avoid TDZ */
+/* McCrew AI — local-time fixes, cancelable break, crisp FX */
 var quiz = null;
 const QUIZ_QUESTIONS = [
   { q:"How long should proper handwashing take?", a:["At least 10s","At least 20s","Until hands feel dry"], correct:1 },
@@ -11,6 +24,34 @@ const QUIZ_QUESTIONS = [
 ];
 
 document.addEventListener("DOMContentLoaded", () => {
+  /* ---- Utils ---- */
+  const ymdLocal = (d = new Date()) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  };
+  const todayISO = () => ymdLocal(new Date());
+  const offsetDate = (days) => { const d = new Date(); d.setDate(d.getDate()+days); return ymdLocal(d); };
+  const toMinutes = (hhmm) => { const [h,m]=hhmm.split(":").map(Number); return h*60+m; };
+  const minutesToHrs = (min) => (min/60).toFixed(2);
+  const clamp = (n,min,max)=>Math.max(min, Math.min(max,n));
+  const warn = (m)=>console.warn("[McCrew]", m);
+  const escapeHTML = (s)=> s.replace(/[&<>"']/g, m=>({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;" }[m]));
+
+  function nextFridayISO(){
+    const d=new Date(); const dow=d.getDay(); let add=(5-dow+7)%7; if (add===0) add=7;
+    d.setDate(d.getDate()+add); return ymdLocal(d);
+  }
+  function paydayAfter(dateISO, freq){
+    const [Y,M,D]=dateISO.split("-").map(Number);
+    const d=new Date(Y,M-1,D);
+    if (freq==="weekly") d.setDate(d.getDate()+7);
+    else if (freq==="biweekly") d.setDate(d.getDate()+14);
+    else if (freq==="monthly") d.setMonth(d.getMonth()+1);
+    return ymdLocal(d);
+  }
+
   /* ---- Demo Data ---- */
   const store = {
     employees: [
@@ -69,62 +110,45 @@ document.addEventListener("DOMContentLoaded", () => {
       `• Purge steam wand, run cleaning cycle, soak parts as per spec, log completion.` },
   ];
 
-  /* ---- Utils ---- */
-  function todayISO(){ return new Date().toISOString().slice(0,10); }
-  function offsetDate(days){ const d = new Date(); d.setDate(d.getDate()+days); return d.toISOString().slice(0,10); }
-  function toMinutes(hhmm){ const [h,m]=hhmm.split(":").map(Number); return h*60+m; }
-  function minutesToHrs(min){ return (min/60).toFixed(2); }
-  function nextFridayISO(){ const d=new Date(); const day=d.getDay(); const add=(5-day+7)%7||7; d.setDate(d.getDate()+add); return d.toISOString().slice(0,10); }
-  function paydayAfter(dateISO, freq){
-    const d = new Date(dateISO+"T00:00:00");
-    if (freq==="weekly") d.setDate(d.getDate()+7);
-    else if (freq==="biweekly") d.setDate(d.getDate()+14);
-    else if (freq==="monthly") d.setMonth(d.getMonth()+1);
-    return d.toISOString().slice(0,10);
-  }
-  const clamp = (n,min,max)=>Math.max(min, Math.min(max,n));
-  const warn = (m)=>console.warn("[McCrew]", m);
-  const escapeHTML = (s)=> s.replace(/[&<>"']/g, m=>({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;" }[m]));
-
   /* ---- Persistence ---- */
-  const LS_KEY = "mccrew_ai_polished_v4";
+  const LS_KEY = "mccrew_ai_polished_v5";
   let fxOn = true;
-  try{
+  try {
     const raw = localStorage.getItem(LS_KEY);
-    if(raw){
+    if (raw) {
       const data = JSON.parse(raw);
       ["employees","payConfig","swaps"].forEach(k=>{ if(data[k]) store[k]=data[k]; });
       fxOn = data.fxOn ?? true;
     }
-  }catch(e){ warn(e.message); }
-  const persist = ()=>localStorage.setItem(LS_KEY, JSON.stringify({ ...store, fxOn }));
+  } catch(e){ warn(e.message); }
+  const persist = () => {
+    try { localStorage.setItem(LS_KEY, JSON.stringify({ ...store, fxOn })); } catch(e){ warn(e.message); }
+  };
 
-  /* ---- Elements ---- */
-  const chatLog = document.getElementById("chatLog");
-  const chatForm = document.getElementById("chatForm");
-  const chatText = document.getElementById("chatText");
-  const kbList  = document.getElementById("kbList");
-  const empIdInput = document.getElementById("empId");
+  /* ---- Els ---- */
+  const $ = (id) => document.getElementById(id);
+  const chatLog = $("chatLog");
+  const chatForm = $("chatForm");
+  const chatText = $("chatText");
+  const kbList  = $("kbList");
+  const empIdInput = $("empId");
+  const openAdminBtn = $("openAdmin");
+  const adminModal = $("adminModal");
+  const closeAdminBtn = $("closeAdmin");
+  const aEmpId = $("aEmpId");
+  const aName  = $("aName");
+  const aRate  = $("aRate");
+  const addEmpBtn = $("addEmp");
+  const empTable = $("empTable");
+  const payFreq = $("payFreq");
+  const nextPayday = $("nextPayday");
+  const savePayConfig = $("savePayConfig");
+  const fxCanvas = $("fx");
+  const toasts = $("toasts");
+  const toggleFXBtn = $("toggleFX");
+  const on = (el, ev, fn)=> el?.addEventListener?.(ev, fn);
 
-  const openAdminBtn = document.getElementById("openAdmin");
-  const adminModal = document.getElementById("adminModal");
-  const closeAdminBtn = document.getElementById("closeAdmin");
-  const aEmpId = document.getElementById("aEmpId");
-  const aName  = document.getElementById("aName");
-  const aRate  = document.getElementById("aRate");
-  const addEmpBtn = document.getElementById("addEmp");
-  const empTable = document.getElementById("empTable");
-  const payFreq = document.getElementById("payFreq");
-  const nextPayday = document.getElementById("nextPayday");
-  const savePayConfig = document.getElementById("savePayConfig");
-
-  const fxCanvas = document.getElementById("fx");
-  const toasts = document.getElementById("toasts");
-  const toggleFXBtn = document.getElementById("toggleFX");
-
-  const on = (el, ev, fn)=> el && el.addEventListener ? el.addEventListener(ev, fn) : warn(`skip ${ev}`);
-
-  /* ---- Render KB ---- */
+  /* ---- KB render ---- */
   if (kbList){
     KB.forEach(item=>{
       const li = document.createElement("li");
@@ -137,17 +161,17 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  /* ---- Ripple for quicks ---- */
+  /* ---- Quick ripple ---- */
   document.querySelectorAll(".quick, .chip").forEach(btn=>{
     on(btn,"click",(e)=>{
       const r = btn.getBoundingClientRect();
       btn.style.setProperty("--x", (e.clientX - r.left)+"px");
       btn.style.setProperty("--y", (e.clientY - r.top)+"px");
-      handleInput(btn.dataset.msg);
+      handleInput(btn.dataset.msg || btn.textContent || "");
     });
   });
 
-  /* ---- Admin open/close (fixed) ---- */
+  /* ---- Admin modal ---- */
   on(openAdminBtn,"click", ()=>{
     adminModal?.showModal?.();
     renderEmpTable(); initPayConfigFields();
@@ -222,10 +246,10 @@ document.addEventListener("DOMContentLoaded", () => {
   function respondText(text, delay=220){ respondHTML(`<p>${escapeHTML(text).replace(/\n/g,"<br>")}</p>`, delay); }
 
   /* ---- Router ---- */
+  const breakTimers = new Set();
   function handleMessage(raw){
     const text = raw.toLowerCase();
 
-    // quiz answers
     if (quiz && quiz.active && !text.startsWith("/")){
       const pick = text.trim()[0]?.toLowerCase();
       const idx = "abc123".indexOf(pick);
@@ -235,11 +259,12 @@ document.addEventListener("DOMContentLoaded", () => {
         const ok = mapped === curr.correct;
         if (ok) beep(880,120,'triangle'); else beep(220,160,'sawtooth');
         respondHTML(`<p><b>${ok? "✅ Correct":"❌ Not quite"}</b> — ${escapeHTML(curr.a[curr.correct])}</p>`,140);
+        if (ok) quiz.score++;
         quiz.idx++;
         if (quiz.idx >= QUIZ_QUESTIONS.length){
-          respondHTML(`<p><b>Quiz complete!</b> Score: ${quiz.score + (ok?1:0)}/${QUIZ_QUESTIONS.length}</p>`,220);
+          respondHTML(`<p><b>Quiz complete!</b> Score: ${quiz.score}/${QUIZ_QUESTIONS.length}</p>`,220);
           quiz = null; toast("Quiz complete!","good");
-        } else { if (ok) quiz.score++; setTimeout(askQuizQuestion, 300); }
+        } else { setTimeout(askQuizQuestion, 300); }
         return;
       }
     }
@@ -253,7 +278,11 @@ document.addEventListener("DOMContentLoaded", () => {
     if (text.startsWith("/quiz"))   return handleQuiz(raw);
     if (text.startsWith("/quit"))   { quiz=null; return respondText("Exited quiz."); }
     if (text.startsWith("/break"))  return handleBreak(raw);
-    if (text.startsWith("/cancelbreak")) return respondText("Break timer cancelled.");
+    if (text.startsWith("/cancelbreak")){
+      breakTimers.forEach(clearInterval);
+      breakTimers.clear();
+      return respondText("Break timer(s) cancelled.");
+    }
     if (text.startsWith("/swap"))   return handleSwap(raw);
     if (text.startsWith("/swaps"))  return listSwaps();
 
@@ -306,7 +335,7 @@ document.addEventListener("DOMContentLoaded", () => {
   function handleWeek(idMaybe){
     const emp = findEmployee(idMaybe); if(!emp) return;
     const start = new Date();
-    const days = [...Array(7)].map((_,i)=>{const d=new Date(start); d.setDate(d.getDate()+i); return d.toISOString().slice(0,10);});
+    const days = [...Array(7)].map((_,i)=>{const d=new Date(start); d.setDate(d.getDate()+i); return ymdLocal(d);});
     const items = days.map(d=>{
       const s = emp.plannedShifts?.find(x=>x.date===d);
       return `<li>${d}: ${s? `${s.start}–${s.end}` : "—"}</li>`;
@@ -318,22 +347,31 @@ document.addEventListener("DOMContentLoaded", () => {
     const today = todayISO();
     const shift = emp.plannedShifts?.find(s=>s.date===today);
     if(!shift) return respondText(`${emp.name}: No shift today (${today}).`);
-    const durMin = toMinutes(shift.end)-toMinutes(shift.start);
-    const hours = durMin/60;
+
+    const startMin = toMinutes(shift.start);
+    const endMin   = toMinutes(shift.end);
+    const durMin   = Math.max(0, endMin - startMin);
+    const hours    = durMin/60;
+
+    const nightStart = 22 * 60;
+    const nightMin = Math.max(0, Math.min(endMin, 24*60) - Math.max(startMin, nightStart));
+    const nightHours = nightMin / 60;
+
     const base = hours * emp.hourlyRate;
-    const nightPremium = shift.end >= "22:00" ? 0.5 * hours : 0;
-    const est = base + nightPremium;
+    const premium = nightHours * 0.5; // demo £0.50/h after 22:00
+    const est = base + premium;
+
     respondHTML(`<p><b>Estimated Pay for Today</b></p>
-      <p>${emp.name}: £${est.toFixed(2)} (rate £${emp.hourlyRate.toFixed(2)}/hr, ${hours.toFixed(2)} hrs)</p>
+      <p>${emp.name}: £${est.toFixed(2)} (rate £${emp.hourlyRate.toFixed(2)}/hr, ${hours.toFixed(2)} hrs${nightHours>0?`, night premium ${nightHours.toFixed(2)}h`:``})</p>
       <small>Demo estimate only; actual pay depends on timeclock, premiums, breaks, taxes, etc.</small>`);
     toast("Pay estimated","good"); confetti(900);
   }
   function handleNextPay(){
-    const { frequency, nextPayday } = store.payConfig;
+    const { frequency } = store.payConfig;
     const today = todayISO();
-    let next = nextPayday;
-    if (today > nextPayday){
-      let t = nextPayday; while (t <= today){ t = paydayAfter(t, frequency); }
+    let next = store.payConfig.nextPayday;
+    if (today > next){
+      let t = next; while (t <= today){ t = paydayAfter(t, frequency); }
       next = t; store.payConfig.nextPayday = next; persist();
     }
     const after = paydayAfter(next, frequency);
@@ -370,22 +408,32 @@ document.addEventListener("DOMContentLoaded", () => {
     const mins = clamp(isNaN(m)?20:m, 5, 60);
     let ends = Date.now() + mins*60*1000;
     const id = "breakTimer_"+Math.random().toString(36).slice(2);
-    respondHTML(`<p id="${id}"><b>Break timer:</b> ${mins}:00</p>`, 120);
+    respondHTML(`<p id="${id}"><b>Break timer:</b> ${String(mins).padStart(2,"0")}:00</p>`, 120);
+
     const t = setInterval(()=>{
-      const el = document.getElementById(id); if(!el){ clearInterval(t); return; }
+      const el = document.getElementById(id); 
+      if(!el){ clearInterval(t); breakTimers.delete(t); return; }
       const left = Math.max(0, ends - Date.now());
       const mm = Math.floor(left/60000).toString().padStart(2,"0");
       const ss = Math.floor((left%60000)/1000).toString().padStart(2,"0");
       el.innerHTML = `<b>Break timer:</b> ${mm}:${ss}`;
-      if (left<=0){ clearInterval(t); respondText("⏰ Break finished — please return to station per policy."); beep(880,200); setTimeout(()=>beep(660,180),220); setTimeout(()=>beep(880,240),440); toast("Break finished","warn"); }
+      if (left<=0){
+        clearInterval(t); breakTimers.delete(t);
+        respondText("⏰ Break finished — please return to station per policy.");
+        beep(880,200); setTimeout(()=>beep(660,180),220); setTimeout(()=>beep(880,240),440);
+        toast("Break finished","warn");
+      }
     }, 250);
+
+    breakTimers.add(t);
   }
   function handleSwap(raw){
     const parts = raw.split(" ").filter(Boolean);
     if (parts.length < 3) return respondText("Usage: /swap YYYY-MM-DD HH:MM-HH:MM Note…");
-    store.swaps.push({ id: Math.random().toString(36).slice(2), date:parts[1], range:parts[2], note:parts.slice(3).join(" ")||"(no note)", createdISO:new Date().toISOString() });
+    const note = parts.slice(3).join(" ").slice(0,140) || "(no note)";
+    store.swaps.push({ id: Math.random().toString(36).slice(2), date:parts[1], range:parts[2], note, createdISO:new Date().toISOString() });
     persist(); toast("Swap request posted","good");
-    respondHTML(`<p><b>Swap request posted</b></p><p>${parts[1]} • ${parts[2]}<br>${escapeHTML(parts.slice(3).join(" ")||"(no note)")}</p>`);
+    respondHTML(`<p><b>Swap request posted</b></p><p>${parts[1]} • ${parts[2]}<br>${escapeHTML(note)}</p>`);
   }
   function listSwaps(){
     if (!store.swaps.length) return respondText("No swap requests yet.");
@@ -393,7 +441,7 @@ document.addEventListener("DOMContentLoaded", () => {
     respondHTML(`<p><b>Latest swap requests</b></p><ul>${html}</ul>`);
   }
 
-  /* ---- KB search helpers ---- */
+  /* ---- KB search ---- */
   function scoreKB(entry, term){
     term = term.toLowerCase(); let score = 0;
     if (entry.topic.toLowerCase().includes(term)) score += 3;
@@ -412,38 +460,59 @@ document.addEventListener("DOMContentLoaded", () => {
     setTimeout(()=>{ el.classList.add("leave"); setTimeout(()=>el.remove(), 180); }, 2000);
   }
 
-  /* ---- Sounds ---- */
+  /* ---- Sounds (singleton AudioContext) ---- */
+  let audioCtx = null;
+  function ensureAudioCtx(){
+    if (audioCtx && audioCtx.state !== "closed") return audioCtx;
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return null;
+    audioCtx = new AC();
+    return audioCtx;
+  }
   function beep(freq=880, ms=160, type='sine'){
     try{
-      const AC = window.AudioContext || window.webkitAudioContext;
-      const ctx = new AC();
+      const ctx = ensureAudioCtx(); if (!ctx) return;
       const o = ctx.createOscillator(); const g = ctx.createGain();
       o.type = type; o.frequency.value = freq; o.connect(g); g.connect(ctx.destination);
       o.start(); g.gain.setValueAtTime(0.2, ctx.currentTime);
       g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + ms/1000);
-      setTimeout(()=>{ o.stop(); ctx.close(); }, ms+60);
+      setTimeout(()=>{ o.stop(); }, ms+20);
     }catch{}
   }
 
-  /* ---- Confetti FX (toggleable, fade + auto-clear) ---- */
+  /* ---- Confetti FX (toggleable, high-DPI, safe RAF) ---- */
   let confettiActive = false, pieces = [], rafId = 0, killAt = 0;
   const fadeMs = 350;
   const ctx2d = fxCanvas?.getContext?.('2d');
 
-  function resizeFx(){ if(!fxCanvas) return; fxCanvas.width = innerWidth; fxCanvas.height = innerHeight; }
+  function resizeFx(){
+    if(!fxCanvas || !ctx2d) return;
+    const dpr = Math.max(1, Math.min(3, window.devicePixelRatio || 1));
+    fxCanvas.width  = Math.floor(innerWidth  * dpr);
+    fxCanvas.height = Math.floor(innerHeight * dpr);
+    fxCanvas.style.width  = innerWidth + "px";
+    fxCanvas.style.height = innerHeight + "px";
+    ctx2d.setTransform(dpr,0,0,dpr,0,0);
+  }
   addEventListener('resize', resizeFx); resizeFx();
 
   function clearFxCanvas(){ if (ctx2d && fxCanvas) ctx2d.clearRect(0,0,fxCanvas.width,fxCanvas.height); }
   function stopConfetti(clear=true){
-    confettiActive = false; if (rafId) cancelAnimationFrame(rafId); rafId = 0;
-    if (clear) clearFxCanvas(); pieces.length = 0;
+    confettiActive = false;
+    if (rafId) cancelAnimationFrame(rafId);
+    rafId = 0;
+    if (clear) clearFxCanvas();
+    pieces.length = 0;
   }
   function makePieces(n){
+    const w = innerWidth, h = innerHeight;
     const arr = [];
     for (let i=0;i<n;i++){
-      arr.push({ x: Math.random()*fxCanvas.width, y: -20 - Math.random()*fxCanvas.height*0.25, r: 4 + Math.random()*5,
+      arr.push({
+        x: Math.random()*w, y: -20 - Math.random()*h*0.25, r: 4 + Math.random()*5,
         vy: 2 + Math.random()*3, vx: -1.2 + Math.random()*2.4, rot: Math.random()*Math.PI, vr: -0.25 + Math.random()*0.5,
-        color: `hsl(${Math.random()*360},90%,60%)`, shape: Math.random()<0.5 ? 'rect' : 'circ' });
+        color: `hsl(${Math.random()*360},90%,60%)`, shape: Math.random()<0.5 ? 'rect' : 'circ'
+      });
     }
     return arr;
   }
@@ -459,7 +528,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const alpha = timeLeft <= fadeMs ? (timeLeft / fadeMs) : 1;
       for (const p of pieces){
         p.vy += 0.015; p.x += p.vx; p.y += p.vy; p.rot += p.vr;
-        if (alpha === 1 && p.y > fxCanvas.height + 20){ p.y = -20; p.x = Math.random()*fxCanvas.width; }
+        if (alpha === 1 && p.y > innerHeight + 20){ p.y = -20; p.x = Math.random()*innerWidth; }
         ctx2d.save(); ctx2d.globalAlpha = alpha; ctx2d.translate(p.x, p.y); ctx2d.rotate(p.rot); ctx2d.fillStyle = p.color;
         if (p.shape === 'rect'){ ctx2d.fillRect(-p.r, -p.r, p.r*2, p.r*2); } else { ctx2d.beginPath(); ctx2d.arc(0,0,p.r,0,Math.PI*2); ctx2d.fill(); }
         ctx2d.restore();

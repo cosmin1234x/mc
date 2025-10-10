@@ -1,24 +1,21 @@
-/* auth-auth0.js — Auth0 SPA shim exposing window.NF (Netlify-like API)
-   Domain/Client ID set for your tenant. Uses appState (no query on redirect_uri). */
+/* auth-auth0.js — Auth0 SPA shim exposing window.NF (single callback on /app.html) */
 (function () {
   const AUTH0_DOMAIN    = "cosminshynia2.uk.auth0.com";
   const AUTH0_CLIENT_ID = "5Ss8SxEwDMUeJV8PvqmuUwUFCdSNHbQv";
   const AUTH0_AUDIENCE  = "";             // optional
-  const CALLBACK_PATH   = "/index.html";  // keep this EXACT
-  const APP_PATH        = "/app.html";
+  const CALLBACK_PATH   = "/app.html";    // 👈 single callback = the app itself
+  const APP_PATH        = "/app.html";    // where we show the UI after login
 
   let auth0Client = null;
 
   async function init() {
-    if (!window.auth0 || !auth0.createAuth0Client) {
-      console.error("Auth0 SDK not loaded");
-      return;
-    }
+    if (!window.auth0 || !auth0.createAuth0Client) { console.error("Auth0 SDK not loaded"); return; }
 
     auth0Client = await auth0.createAuth0Client({
       domain: AUTH0_DOMAIN,
       clientId: AUTH0_CLIENT_ID,
       authorizationParams: {
+        // IMPORTANT: must match Allowed Callback URLs EXACTLY (no query)
         redirect_uri: window.location.origin + CALLBACK_PATH,
         ...(AUTH0_AUDIENCE ? { audience: AUTH0_AUDIENCE } : {})
       },
@@ -26,19 +23,19 @@
       useRefreshTokens: true
     });
 
-    // If we're on the callback page after Auth0 redirect
+    // If Auth0 just redirected back here with code/state, finish the PKCE exchange
     const sp = new URLSearchParams(window.location.search);
     if (sp.has("code") && sp.has("state")) {
       try {
         const { appState } = await auth0Client.handleRedirectCallback();
         const next = (appState && appState.next) || APP_PATH;
-        // Clean query string then go to the intended page
+        // Clean query string to avoid re-processing
         window.history.replaceState({}, document.title, window.location.pathname);
-        location.replace(next);
+        if (location.pathname !== next) location.replace(next);
         return;
       } catch (e) {
         console.error("Auth0 callback error:", e);
-        alert("Login failed. Double-check your SPA settings and callback URLs.");
+        alert("Login failed. Check SPA type, grant types, and exact callback URLs.");
       }
     }
 
@@ -63,28 +60,26 @@
     async function requireAuth(){
       const user = await getUserSafe();
       if (user) return user;
-      const next = new URLSearchParams(window.location.search).get("next") || APP_PATH;
+      const next = APP_PATH; // app is the destination after login
       await auth0Client.loginWithRedirect({
         authorizationParams: {
-          // NOTE: NO query on redirect_uri; it must match Allowed Callback URLs exactly
+          // NOTE: redirect_uri MUST be identical to the one used at client init
           redirect_uri: window.location.origin + CALLBACK_PATH
         },
-        appState: { next } // pass target via appState
+        appState: { next } // pass navigation target here (not in redirect_uri)
       });
-      return null; // redirect occurs
+      return null;
     }
 
     async function signOut(to="/"){
       await auth0Client.logout({ logoutParams: { returnTo: window.location.origin + to } });
     }
-
     async function signIn(next=APP_PATH){
       await auth0Client.loginWithRedirect({
         authorizationParams: { redirect_uri: window.location.origin + CALLBACK_PATH },
         appState: { next }
       });
     }
-
     async function signUp(next=APP_PATH){
       await auth0Client.loginWithRedirect({
         authorizationParams: {
@@ -95,6 +90,7 @@
       });
     }
 
+    // Netlify-like shim your app already uses
     window.NF = {
       provider:"auth0",
       getUserSafe,
@@ -102,7 +98,7 @@
       signOut,
       signIn,
       signUp,
-      auth:{ login: async()=>signIn(), signup: async()=>signUp() } // legacy compatibility
+      auth:{ login: async()=>signIn(), signup: async()=>signUp() } // legacy
     };
   }
 

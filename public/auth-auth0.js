@@ -1,49 +1,44 @@
 /* auth-auth0.js — Auth0 SPA shim exposing window.NF (Netlify-like API)
-   REQUIRED: set AUTH0_DOMAIN & AUTH0_CLIENT_ID below. */
+   Domain/Client ID set for your tenant. Uses appState (no query on redirect_uri). */
 (function () {
-  const AUTH0_DOMAIN    = "cosminshynia2.uk.auth0.com"; // <-- CHANGE
-  const AUTH0_CLIENT_ID = "5Ss8SxEwDMUeJV8PvqmuUwUFCdSNHbQv";     // <-- CHANGE
-  const AUTH0_AUDIENCE  = ""; // optional, e.g., "https://api.example.com"
+  const AUTH0_DOMAIN    = "cosminshynia2.uk.auth0.com";
+  const AUTH0_CLIENT_ID = "5Ss8SxEwDMUeJV8PvqmuUwUFCdSNHbQv";
+  const AUTH0_AUDIENCE  = "";             // optional
+  const CALLBACK_PATH   = "/index.html";  // keep this EXACT
+  const APP_PATH        = "/app.html";
 
   let auth0Client = null;
-
-  function qs(sel){ return document.querySelector(sel); }
-  function toast(msg, type=""){
-    const box = qs("#toasts"); if (!box) return;
-    const el = document.createElement("div");
-    el.className = `toast ${type}`; el.textContent = msg;
-    box.appendChild(el);
-    setTimeout(()=>{ el.classList.add("leave"); setTimeout(()=>el.remove(), 180); }, 1800);
-  }
 
   async function init() {
     if (!window.auth0 || !auth0.createAuth0Client) {
       console.error("Auth0 SDK not loaded");
       return;
     }
+
     auth0Client = await auth0.createAuth0Client({
       domain: AUTH0_DOMAIN,
       clientId: AUTH0_CLIENT_ID,
       authorizationParams: {
-        // We land on app.html authenticated; index.html handles redirect handshake
-        redirect_uri: window.location.origin + "/app.html",
+        redirect_uri: window.location.origin + CALLBACK_PATH,
         ...(AUTH0_AUDIENCE ? { audience: AUTH0_AUDIENCE } : {})
       },
       cacheLocation: "localstorage",
       useRefreshTokens: true
     });
 
-    // Handle index.html redirect handshake (if present)
+    // If we're on the callback page after Auth0 redirect
     const sp = new URLSearchParams(window.location.search);
     if (sp.has("code") && sp.has("state")) {
       try {
-        await auth0Client.handleRedirectCallback();
-        const next = sp.get("next") || "/app.html";
+        const { appState } = await auth0Client.handleRedirectCallback();
+        const next = (appState && appState.next) || APP_PATH;
+        // Clean query string then go to the intended page
         window.history.replaceState({}, document.title, window.location.pathname);
         location.replace(next);
+        return;
       } catch (e) {
         console.error("Auth0 callback error:", e);
-        toast("Login failed", "warn");
+        alert("Login failed. Double-check your SPA settings and callback URLs.");
       }
     }
 
@@ -54,8 +49,7 @@
   function exposeNF(){
     async function getUserSafe(){
       try{
-        const isAuth = await auth0Client.isAuthenticated();
-        if (!isAuth) return null;
+        if (!await auth0Client.isAuthenticated()) return null;
         const u = await auth0Client.getUser();
         return {
           email: u?.email || u?.name || "",
@@ -66,48 +60,49 @@
       }catch{ return null; }
     }
 
-    async function requireAuth(redirectTo = "/"){
+    async function requireAuth(){
       const user = await getUserSafe();
       if (user) return user;
-      const next = new URLSearchParams(window.location.search).get("next") || "/app.html";
-      await auth0Client.loginWithRedirect({
-        authorizationParams: { redirect_uri: window.location.origin + "/index.html?next=" + encodeURIComponent(next) }
-      });
-      return null; // redirect happens
-    }
-
-    async function signOut(to = "/"){
-      await auth0Client.logout({
-        logoutParams: { returnTo: window.location.origin + to }
-      });
-    }
-
-    async function signIn(next = "app.html"){
-      await auth0Client.loginWithRedirect({
-        authorizationParams: { redirect_uri: window.location.origin + "/index.html?next=" + encodeURIComponent(next) }
-      });
-    }
-
-    async function signUp(next = "app.html"){
+      const next = new URLSearchParams(window.location.search).get("next") || APP_PATH;
       await auth0Client.loginWithRedirect({
         authorizationParams: {
-          redirect_uri: window.location.origin + "/index.html?next=" + encodeURIComponent(next),
+          // NOTE: NO query on redirect_uri; it must match Allowed Callback URLs exactly
+          redirect_uri: window.location.origin + CALLBACK_PATH
+        },
+        appState: { next } // pass target via appState
+      });
+      return null; // redirect occurs
+    }
+
+    async function signOut(to="/"){
+      await auth0Client.logout({ logoutParams: { returnTo: window.location.origin + to } });
+    }
+
+    async function signIn(next=APP_PATH){
+      await auth0Client.loginWithRedirect({
+        authorizationParams: { redirect_uri: window.location.origin + CALLBACK_PATH },
+        appState: { next }
+      });
+    }
+
+    async function signUp(next=APP_PATH){
+      await auth0Client.loginWithRedirect({
+        authorizationParams: {
+          redirect_uri: window.location.origin + CALLBACK_PATH,
           screen_hint: "signup"
-        }
+        },
+        appState: { next }
       });
     }
 
     window.NF = {
-      provider: "auth0",
+      provider:"auth0",
       getUserSafe,
       requireAuth,
       signOut,
-      signIn,   // programmatic
-      signUp,   // programmatic
-      auth: {   // legacy compatibility (not used by new login)
-        login: async () => signIn(),
-        signup: async () => signUp()
-      }
+      signIn,
+      signUp,
+      auth:{ login: async()=>signIn(), signup: async()=>signUp() } // legacy compatibility
     };
   }
 

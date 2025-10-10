@@ -1,10 +1,9 @@
-/* auth-auth0.js — Auth0 SPA shim exposing window.NF (single callback on /app.html) */
+/* auth-auth0.js — SPA PKCE, single callback on /app.html */
 (function () {
   const AUTH0_DOMAIN    = "cosminshynia2.uk.auth0.com";
-  const AUTH0_CLIENT_ID = "5Ss8SxEwDMUeJV8PvqmuUwUFCdSNHbQv";
-  const AUTH0_AUDIENCE  = "";             // optional
-  const CALLBACK_PATH   = "/app.html";    // 👈 single callback = the app itself
-  const APP_PATH        = "/app.html";    // where we show the UI after login
+  const AUTH0_CLIENT_ID = "7nbjkWbQ7DkUmJRqXRxB8q9WAy7vofbw";
+  const CALLBACK_PATH   = "/app.html";   // MUST match Allowed Callback URLs exactly
+  const APP_PATH        = "/app.html";   // where your UI lives
 
   let auth0Client = null;
 
@@ -14,28 +13,23 @@
     auth0Client = await auth0.createAuth0Client({
       domain: AUTH0_DOMAIN,
       clientId: AUTH0_CLIENT_ID,
-      authorizationParams: {
-        // IMPORTANT: must match Allowed Callback URLs EXACTLY (no query)
-        redirect_uri: window.location.origin + CALLBACK_PATH,
-        ...(AUTH0_AUDIENCE ? { audience: AUTH0_AUDIENCE } : {})
-      },
+      authorizationParams: { redirect_uri: window.location.origin + CALLBACK_PATH },
       cacheLocation: "localstorage",
       useRefreshTokens: true
     });
 
-    // If Auth0 just redirected back here with code/state, finish the PKCE exchange
+    // Finish Auth0 redirect if we have code/state
     const sp = new URLSearchParams(window.location.search);
     if (sp.has("code") && sp.has("state")) {
       try {
         const { appState } = await auth0Client.handleRedirectCallback();
         const next = (appState && appState.next) || APP_PATH;
-        // Clean query string to avoid re-processing
         window.history.replaceState({}, document.title, window.location.pathname);
         if (location.pathname !== next) location.replace(next);
         return;
       } catch (e) {
         console.error("Auth0 callback error:", e);
-        alert("Login failed. Check SPA type, grant types, and exact callback URLs.");
+        console.error("Check: SPA app, Authorization Code grant, exact callback URLs, domain.");
       }
     }
 
@@ -48,25 +42,16 @@
       try{
         if (!await auth0Client.isAuthenticated()) return null;
         const u = await auth0Client.getUser();
-        return {
-          email: u?.email || u?.name || "",
-          sub: u?.sub || "",
-          jwt: async () => auth0Client.getTokenSilently().catch(()=>null),
-          raw: u
-        };
+        return { email: u?.email || u?.name || "", sub: u?.sub || "", jwt: async()=>auth0Client.getTokenSilently().catch(()=>null), raw: u };
       }catch{ return null; }
     }
 
     async function requireAuth(){
       const user = await getUserSafe();
       if (user) return user;
-      const next = APP_PATH; // app is the destination after login
       await auth0Client.loginWithRedirect({
-        authorizationParams: {
-          // NOTE: redirect_uri MUST be identical to the one used at client init
-          redirect_uri: window.location.origin + CALLBACK_PATH
-        },
-        appState: { next } // pass navigation target here (not in redirect_uri)
+        authorizationParams: { redirect_uri: window.location.origin + CALLBACK_PATH },
+        appState: { next: APP_PATH }
       });
       return null;
     }
@@ -82,24 +67,13 @@
     }
     async function signUp(next=APP_PATH){
       await auth0Client.loginWithRedirect({
-        authorizationParams: {
-          redirect_uri: window.location.origin + CALLBACK_PATH,
-          screen_hint: "signup"
-        },
+        authorizationParams: { redirect_uri: window.location.origin + CALLBACK_PATH, screen_hint: "signup" },
         appState: { next }
       });
     }
 
-    // Netlify-like shim your app already uses
-    window.NF = {
-      provider:"auth0",
-      getUserSafe,
-      requireAuth,
-      signOut,
-      signIn,
-      signUp,
-      auth:{ login: async()=>signIn(), signup: async()=>signUp() } // legacy
-    };
+    window.NF = { provider:"auth0", getUserSafe, requireAuth, signOut, signIn, signUp,
+      auth:{ login: async()=>signIn(), signup: async()=>signUp() } };
   }
 
   init().catch(err => console.error("Auth0 init failed", err));

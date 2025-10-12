@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <meta name="theme-color" content="#ffc72c" />
+  <meta name="theme-color" content="#c92318" />
   <title>McCrew AI — App</title>
   <link rel="stylesheet" href="./styles.css" />
 </head>
@@ -13,7 +13,8 @@
 
   <!-- App Bar -->
   <header class="appbar">
-    <button id="navToggle" class="icon ghost" aria-label="Open menu">☰</button>
+    <button id="navToggle" class="icon ghost" type="button" aria-label="Open menu">☰</button>
+
     <div class="brand">
       <span class="arch">M</span><span>cCrew AI</span>
     </div>
@@ -22,21 +23,25 @@
 
     <div class="searchbar">
       <input id="chatText" placeholder="Type /help or ask a rule…" autocomplete="off" />
-      <button id="sendTop" class="send">Send</button>
+      <button id="sendTop" class="send" type="button">Send</button>
     </div>
 
     <div id="userInfo" class="user-pill">
       <img id="userPic" alt="" />
       <span id="userName">Crew</span>
-      <button id="userMenuBtn" class="icon ghost" aria-haspopup="menu">▾</button>
+      <button id="userMenuBtn" class="icon ghost" type="button" aria-haspopup="menu">▾</button>
       <div id="userMenu" class="menu" role="menu" hidden>
-        <button id="menuProfile" role="menuitem">Profile</button>
-        <button id="menuToggleFX" role="menuitem">Toggle FX</button>
-        <button id="menuAdmin" role="menuitem">Admin</button>
+        <button id="menuProfile" role="menuitem" type="button">Profile</button>
+        <button id="menuToggleFX" role="menuitem" type="button">Toggle FX</button>
+        <button id="menuAdmin" role="menuitem" type="button">Admin</button>
         <hr/>
-        <button id="menuLogout" role="menuitem" class="danger">Logout</button>
+        <button id="menuLogout" role="menuitem" type="button" class="danger">Logout</button>
       </div>
     </div>
+
+    <button id="toggleFX" class="ghost" type="button">FX: On</button>
+    <button id="openAdmin" class="ghost" type="button">Admin</button>
+    <button id="logout" class="ghost" type="button" style="display:none">Logout</button>
   </header>
 
   <!-- Side Drawer -->
@@ -45,28 +50,18 @@
       <div class="brand">
         <span class="arch">M</span><span>cCrew AI</span>
       </div>
-      <button id="navClose" class="icon ghost">✕</button>
+      <button id="navClose" class="icon ghost" type="button" aria-label="Close menu">✕</button>
     </div>
 
     <nav class="nav">
-      <button class="nav-item" data-nav="dashboard">
-        <span>Dashboard</span>
-      </button>
-      <button class="nav-item" data-nav="chat">
-        <span>Chat</span>
-      </button>
-      <button class="nav-item" data-nav="knowledge">
-        <span>Knowledge</span>
-      </button>
-      <button class="nav-item" data-nav="swaps">
-        <span>Swap Board</span>
-      </button>
-      <button class="nav-item" id="navAdmin">
-        <span>Admin</span>
-      </button>
+      <button class="nav-item" type="button" data-nav="dashboard">Dashboard</button>
+      <button class="nav-item" type="button" data-nav="chat">Chat</button>
+      <button class="nav-item" type="button" data-nav="knowledge">Knowledge</button>
+      <button class="nav-item" type="button" data-nav="swaps">Swap Board</button>
+      <button class="nav-item" type="button" id="navAdmin">Admin</button>
       <hr/>
-      <button class="nav-item" id="navFX">Toggle FX</button>
-      <button class="nav-item danger" id="navLogout">Logout</button>
+      <button class="nav-item" type="button" id="navFX">Toggle FX</button>
+      <button class="nav-item danger" type="button" id="navLogout">Logout</button>
     </nav>
 
     <div class="drawer-foot">
@@ -81,14 +76,14 @@
       <div class="card">
         <h3>Quick Actions</h3>
         <div class="quick-grid">
-          <button class="quick" data-msg="/shift">Today’s Shift</button>
-          <button class="quick" data-msg="/pay">Today’s Pay</button>
-          <button class="quick" data-msg="/nextpay">Next Paycheck</button>
-          <button class="quick" data-msg="/week">This Week</button>
-          <button class="quick" data-msg="/quiz start">Training Quiz</button>
-          <button class="quick" data-msg="/break 20">Start 20-min Break</button>
-          <button class="quick" data-msg="/policy uniform">Policy: Uniform</button>
-          <button class="quick" data-msg="/policy allergen">Policy: Allergen</button>
+          <button class="quick" type="button" data-msg="/shift">Today’s Shift</button>
+          <button class="quick" type="button" data-msg="/pay">Today’s Pay</button>
+          <button class="quick" type="button" data-msg="/nextpay">Next Paycheck</button>
+          <button class="quick" type="button" data-msg="/week">This Week</button>
+          <button class="quick" type="button" data-msg="/quiz start">Training Quiz</button>
+          <button class="quick" type="button" data-msg="/break 20">Start 20-min Break</button>
+          <button class="quick" type="button" data-msg="/policy uniform">Policy: Uniform</button>
+          <button class="quick" type="button" data-msg="/policy allergen">Policy: Allergen</button>
         </div>
       </div>
 
@@ -96,7 +91,7 @@
         <h3>Your Employee ID</h3>
         <div class="row">
           <input id="empId" placeholder="e.g. 1234" />
-          <button class="ghost" id="saveEmpId">Save</button>
+          <button class="ghost" id="saveEmpId" type="button">Save</button>
         </div>
         <small>Used for shift & pay lookups (demo data).</small>
       </div>
@@ -124,7 +119,7 @@
     </section>
   </main>
 
-  <!-- Admin Modal (unchanged structure, styled by CSS) -->
+  <!-- Admin Modal -->
   <dialog id="adminModal">
     <form method="dialog" class="admin">
       <header>
@@ -169,8 +164,9 @@
   <!-- Auth0 SDK + NF shim -->
   <script defer src="https://cdn.jsdelivr.net/npm/@auth0/auth0-spa-js@2/dist/auth0-spa-js.production.js"></script>
   <script defer src="./auth-auth0.js"></script>
-  <!-- App logic + UI wiring -->
+  <!-- App logic -->
   <script defer src="./app.js"></script>
+  <!-- UI wiring -->
   <script defer src="./ui.js"></script>
 </body>
 </html>

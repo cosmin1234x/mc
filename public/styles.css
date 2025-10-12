@@ -1,47 +1,50 @@
-/* ===== McCrew AI — McDonald's Inspired UI (Upgraded) ===== */
+/* ===== McCrew AI — McDonald's Inspired (Darker, Minimal Motion) ===== */
 :root{
-  --mc-red:#DA291C; --mc-gold:#FFC72C; --mc-gold-2:#FFD964; --mc-cream:#FFF7E6;
-  --ink:#1f2328; --muted:#5b6068; --line:#ececf0; --panel:#ffffff; --chip:#fffaf2;
-  --bg:#fff7f2; --text:var(--ink); --brand:var(--mc-gold); --accent:var(--mc-red);
+  --mc-red:#c92318; --mc-gold:#f3bf26; --mc-gold-2:#f8d560; --mc-cream:#fff0d8;
+  --ink:#1f2328; --muted:#5b6068; --line:#e4e4e8; --panel:#ffffff; --chip:#fff6e5;
+  --bg:#f7efe9; --text:var(--ink); --brand:var(--mc-gold); --accent:var(--mc-red);
 }
 
 *{box-sizing:border-box}
 html,body{height:100%}
 body.mcd{
-  margin:0; color:var(--text); background:
-    radial-gradient(1200px 700px at 100% -10%, rgba(0,0,0,.05), transparent 60%),
-    radial-gradient(900px 600px at -10% 110%, rgba(0,0,0,.05), transparent 60%),
-    linear-gradient(180deg, #fff1ec, #ffe7e1 45%, #ffe0d9 100%);
+  margin:0; color:var(--text);
+  background:linear-gradient(180deg, #f7efe9, #f1e7df 50%, #ece1d8 100%);
   font:16px/1.5 system-ui, Segoe UI, Roboto, Helvetica, Arial;
 }
+
+/* Reduce motion / remove flashy effects */
+*{animation-duration:0.01s!important; animation-iteration-count:1!important}
+button, .send, .ghost, .quick { transition: background .15s ease, border-color .15s ease, transform .01s; }
 
 /* App Bar */
 .appbar{
   position:sticky; top:0; z-index:20;
   display:flex; align-items:center; gap:10px;
-  padding:10px 14px; border-bottom:1px solid #f4c0bb;
-  background:linear-gradient(90deg, var(--mc-red), #ef4b40);
-  color:#fff; box-shadow:0 6px 18px rgba(218,41,28,.18);
+  padding:10px 14px; border-bottom:1px solid #e9c2bc;
+  background:linear-gradient(90deg, #b81f16, #d33128);
+  color:#fff;
 }
 .appbar .brand{font-weight:900; letter-spacing:.2px; display:flex; gap:6px; align-items:center}
-.arch{color:#000; background:var(--mc-gold); font-weight:900; border-radius:10px; padding:0 10px; box-shadow:0 2px 0 #f0b400 inset, 0 6px 16px rgba(0,0,0,.18)}
+.arch{color:#000; background:var(--mc-gold); font-weight:900; border-radius:10px; padding:0 10px; box-shadow:0 2px 0 #f0b400 inset}
+
+/* Basics */
 .icon{line-height:1; font-weight:900}
 .ghost{background:#ffffff22; color:#fff; border:1px solid #ffffff66; padding:8px 12px; border-radius:12px; cursor:pointer}
 .ghost:hover{background:#ffffff33; border-color:#fff}
 .spacer{flex:1}
 
 /* Searchbar in appbar */
-.searchbar{display:flex; gap:8px; align-items:center; min-width:320px; max-width:520px; width:38vw}
+.searchbar{display:flex; gap:8px; align-items:center; min-width:280px; max-width:520px; width:36vw}
 .searchbar input{flex:1; padding:10px 12px; border-radius:12px; border:1px solid #ffffff66; background:#ffffff22; color:#fff}
 .searchbar input::placeholder{color:#ffffffaa}
-.send{padding:10px 14px; border-radius:12px; border:0; color:#1a1a1a; font-weight:900; cursor:pointer; background:linear-gradient(90deg,var(--mc-gold), var(--mc-gold-2), var(--mc-red)); background-size:200% 100%; animation:btnflow 4s linear infinite; box-shadow:0 6px 16px rgba(218,41,28,.18)}
-@keyframes btnflow{0%{background-position:0 0}100%{background-position:200% 0}}
+.send{padding:10px 14px; border-radius:12px; border:0; color:#1a1a1a; font-weight:900; cursor:pointer; background:linear-gradient(90deg,var(--mc-gold), var(--mc-gold-2), var(--mc-red)); background-size:200% 100%}
 
 /* User pill & menu */
 .user-pill{display:flex; align-items:center; gap:8px; padding:4px 6px; border-radius:999px; background:#ffffff22; border:1px solid #ffffff55}
 .user-pill img{width:28px; height:28px; border-radius:50%; display:none}
 .user-pill #userName{font-weight:700}
-.menu{position:absolute; right:14px; top:56px; background:#fff; color:#222; border:1px solid var(--line); border-radius:14px; box-shadow:0 12px 30px rgba(0,0,0,.14); min-width:210px; display:grid; overflow:hidden}
+.menu{position:absolute; right:14px; top:56px; background:#fff; color:#222; border:1px solid var(--line); border-radius:14px; min-width:210px; display:grid; overflow:hidden; box-shadow:none}
 .menu[hidden]{display:none}
 .menu button{padding:10px 12px; text-align:left; background:#fff; border:0; cursor:pointer}
 .menu button:hover{background:#fff7df}
@@ -67,7 +70,7 @@ body.mcd{
   display:grid; grid-template-columns:360px 1fr; gap:16px;
 }
 .rail{display:grid; gap:16px}
-.card{background:#fff; border:1px solid var(--line); border-radius:18px; box-shadow:0 10px 30px rgba(0,0,0,.08); padding:14px}
+.card{background:#fff; border:1px solid var(--line); border-radius:18px; box-shadow:none; padding:14px}
 .card h3{margin:6px 0 10px}
 .row{display:flex; gap:8px; flex-wrap:wrap}
 .row input{flex:1; padding:10px 12px; border-radius:12px; border:1px solid var(--line)}
@@ -75,12 +78,10 @@ body.mcd{
 .kb-list li{border:1px solid var(--line); padding:10px 12px; border-radius:12px; cursor:pointer}
 .kb-list li:hover{border-color:#ffdca4; background:#fffdf2}
 
+/* Quick actions (no shine/pulse) */
 .quick-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px}
-.quick{position:relative; overflow:hidden; border:1px solid var(--line); background:#fff; color:var(--text); border-radius:14px; padding:12px; cursor:pointer; text-align:left; font-weight:800}
-.quick:hover{transform:translateY(-1px); box-shadow:0 8px 22px rgba(218,41,28,.12); border-color:#ffdca4}
-.quick::before{content:""; position:absolute; top:-60%; left:-30%; width:45%; height:220%; transform:rotate(25deg); background:linear-gradient(90deg, transparent, rgba(255,255,255,.45), transparent); opacity:0}
-.quick:hover::before{animation:shine 1s ease; opacity:1}
-@keyframes shine{from{left:-30%}to{left:130%}}
+.quick{position:relative; overflow:hidden; border:1px solid var(--line); background:#fff; color:var(--text); border-radius:14px; padding:12px; cursor:pointer; text-align:left; font-weight:800; box-shadow:none}
+.quick:hover{transform:none; box-shadow:none; border-color:#ffdca4}
 
 /* Chat */
 .chat-card{display:flex; flex-direction:column; height:min(78vh, 880px)}
@@ -90,7 +91,6 @@ body.mcd{
 .msg code{background:#fff2cc; padding:2px 6px; border-radius:6px; border:1px solid #ffe18a}
 .chat-input{display:flex; gap:8px; padding:12px; border-top:1px solid var(--line)}
 .chat-input input{flex:1; padding:12px; border-radius:12px; border:1px solid var(--line)}
-.fx{position:fixed; inset:0; width:100vw; height:100vh; z-index:5; pointer-events:none}
 
 /* Admin dialog */
 dialog::backdrop{background:rgba(0,0,0,.35)}
@@ -104,13 +104,15 @@ dialog::backdrop{background:rgba(0,0,0,.35)}
 #empTable th,#empTable td{border-bottom:1px solid var(--line); padding:8px 10px; text-align:left}
 #empTable tr:last-child td{border-bottom:0}
 
+/* FX Canvas */
+.fx{position:fixed; inset:0; width:100vw; height:100vh; z-index:5; pointer-events:none}
+
 /* Toasts */
 .toasts{position:fixed; right:16px; bottom:16px; display:grid; gap:8px; z-index:50}
-.toast{padding:10px 12px; border-radius:12px; background:#fff; border:1px solid var(--line); color:#222; box-shadow:0 10px 30px rgba(0,0,0,.12); animation:toastIn .2s ease both}
+.toast{padding:10px 12px; border-radius:12px; background:#fff; border:1px solid var(--line); color:#222; box-shadow:none}
 .toast.good{border-color:#1f7a3b; background:#eaffea}
 .toast.warn{border-color:#b26b00; background:#fff2cc}
-@keyframes toastIn{from{transform:translateY(8px); opacity:0} to{transform:none; opacity:1}}
-.toast.leave{animation:toastOut .18s ease both}@keyframes toastOut{to{transform:translateY(8px); opacity:0}}
+.toast.leave{opacity:.6}
 
 /* Footer */
 .foot{max-width:1200px; margin:16px auto; padding:0 16px; color:#6a6f78}

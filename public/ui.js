@@ -1,12 +1,15 @@
-// ui.js — drawer, top search, profile menu, and nav actions
+// ui.js — drawer, top search, profile menu, and nav actions (fixed)
 document.addEventListener("DOMContentLoaded", () => {
   const $ = (id) => document.getElementById(id);
+
   const drawer = $("drawer");
   const navToggle = $("navToggle");
   const navClose = $("navClose");
   const navFX = $("navFX");
   const navAdmin = $("navAdmin");
   const navLogout = $("navLogout");
+
+  const headerAdminBtn = $("openAdmin"); // topbar Admin button
 
   const userMenuBtn = $("userMenuBtn");
   const userMenu = $("userMenu");
@@ -19,85 +22,84 @@ document.addEventListener("DOMContentLoaded", () => {
   const chatTextBottom = $("chatTextBottom");
   const chatForm = $("chatForm");
 
-  // Drawer toggle
+  // Helper: open Admin modal directly (no proxy click)
+  function openAdminDirect() {
+    const modal = $("adminModal");
+    if (modal?.showModal) modal.showModal();
+  }
+
+  // Helper: toggle FX via existing button (fallback-safe)
+  function toggleFX() {
+    const fxBtn = $("toggleFX");
+    if (fxBtn) fxBtn.click();
+  }
+
+  // Drawer
   const openDrawer = () => drawer?.classList.add("open");
   const closeDrawer = () => drawer?.classList.remove("open");
-  navToggle?.addEventListener("click", openDrawer);
-  navClose?.addEventListener("click", closeDrawer);
-  drawer?.addEventListener("click", (e) => {
-    if (e.target === drawer) closeDrawer();
-  });
+  navToggle?.addEventListener("click", (e)=>{ e.preventDefault(); openDrawer(); });
+  navClose?.addEventListener("click", (e)=>{ e.preventDefault(); closeDrawer(); });
+  drawer?.addEventListener("click", (e) => { if (e.target === drawer) closeDrawer(); });
 
   // User menu
   function toggleUserMenu(force){
-    const open = force ?? userMenu?.hidden;
     if (!userMenu) return;
+    const open = (force === undefined) ? userMenu.hidden : !force;
     userMenu.hidden = !open;
   }
-  userMenuBtn?.addEventListener("click", () => toggleUserMenu());
+  userMenuBtn?.addEventListener("click", (e)=>{ e.preventDefault(); e.stopPropagation(); toggleUserMenu(); });
   document.addEventListener("click", (e)=>{
     if (!userMenu || !userMenuBtn) return;
     if (!userMenu.contains(e.target) && !userMenuBtn.contains(e.target)) userMenu.hidden = true;
   });
 
-  // Merge top send with bottom chat form
-  sendTop?.addEventListener("click", () => {
+  // Top bar send hooks into bottom chat form
+  sendTop?.addEventListener("click", (e)=>{
+    e.preventDefault();
     const txt = (chatTextTop?.value || "").trim();
     if (!txt) return;
-    chatTextBottom.value = txt;
+    if (chatTextBottom) chatTextBottom.value = txt;
     chatForm?.dispatchEvent(new Event("submit", { cancelable:true, bubbles:true }));
     chatTextTop.value = "";
   });
 
-  // Nav actions
-  navFX?.addEventListener("click", () => {
-    document.getElementById("toggleFX")?.click();
-    closeDrawer();
-  });
-  menuToggleFX?.addEventListener("click", () => {
-    document.getElementById("toggleFX")?.click();
-    toggleUserMenu(false);
-  });
+  // Header Admin button
+  headerAdminBtn?.addEventListener("click", (e)=>{ e.preventDefault(); openAdminDirect(); });
 
-  function openAdmin(){
-    document.getElementById("openAdmin")?.click();
-    closeDrawer(); toggleUserMenu(false);
-  }
-  navAdmin?.addEventListener("click", openAdmin);
-  menuAdmin?.addEventListener("click", openAdmin);
+  // Menu items
+  navFX?.addEventListener("click", (e)=>{ e.preventDefault(); toggleFX(); closeDrawer(); });
+  menuToggleFX?.addEventListener("click", (e)=>{ e.preventDefault(); toggleFX(); toggleUserMenu(false); });
 
-  async function doLogout(){
+  function doOpenAdmin(e){ e?.preventDefault?.(); openAdminDirect(); closeDrawer(); toggleUserMenu(false); }
+  navAdmin?.addEventListener("click", doOpenAdmin);
+  menuAdmin?.addEventListener("click", doOpenAdmin);
+
+  async function doLogout(e){
+    e?.preventDefault?.();
     try{ await NF?.signOut?.("/"); }catch{}
   }
   navLogout?.addEventListener("click", doLogout);
   menuLogout?.addEventListener("click", doLogout);
 
-  // Drawer nav “virtual pages”
+  // Drawer “sections”
   document.querySelectorAll(".nav-item[data-nav]").forEach(btn=>{
-    btn.addEventListener("click", () => {
+    btn.addEventListener("click", (e)=>{
+      e.preventDefault();
       const target = btn.getAttribute("data-nav");
-      if (target === "chat") {
-        document.querySelector("#chatTextBottom")?.focus();
-      }
-      if (target === "knowledge") {
-        // focus KB list
-        document.querySelector("#kbList")?.scrollIntoView({ behavior:"smooth", block:"start" });
-      }
+      if (target === "chat") document.querySelector("#chatTextBottom")?.focus();
+      if (target === "knowledge") document.querySelector("#kbList")?.scrollIntoView({ behavior:"smooth", block:"start" });
       if (target === "swaps") {
-        // show latest swaps via command
-        const form = document.getElementById("chatForm");
-        const input = document.getElementById("chatTextBottom");
+        const input = $("chatTextBottom"); const form = $("chatForm");
         if (input && form){ input.value = "/swaps"; form.dispatchEvent(new Event("submit", { cancelable:true, bubbles:true })); }
       }
-      if (target === "dashboard") {
-        window.scrollTo({ top:0, behavior:"smooth" });
-      }
+      if (target === "dashboard") window.scrollTo({ top:0, behavior:"smooth" });
       closeDrawer();
     });
   });
 
-  // Persist Employee ID shortcut
-  $("saveEmpId")?.addEventListener("click", ()=>{
+  // Persist Employee ID
+  $("saveEmpId")?.addEventListener("click", (e)=>{
+    e.preventDefault();
     const emp = $("empId")?.value?.trim();
     if (!emp) return;
     try{ localStorage.setItem("mccrew_emp_id", emp); }catch{}
@@ -106,7 +108,6 @@ document.addEventListener("DOMContentLoaded", () => {
     (document.getElementById("toasts")||document.body).appendChild(toast);
     setTimeout(()=>{ toast.classList.add("leave"); setTimeout(()=>toast.remove(), 200); }, 1600);
   });
-  // Restore if present
   try{
     const saved = localStorage.getItem("mccrew_emp_id");
     if (saved && $("empId")) $("empId").value = saved;

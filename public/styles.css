@@ -79,3 +79,5 @@ dialog::backdrop{background:rgba(0,0,0,.35)}
 .foot{max-width:1200px;margin:16px auto;padding:0 16px;color:#6a6f78}
 @media (max-width:900px){.layout{grid-template-columns:1fr}.admin{min-width:auto;width:95vw}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+#userInfo:hover { background:#ffffff33; border-radius:12px; padding:4px 8px; }
+

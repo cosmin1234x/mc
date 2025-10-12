@@ -371,3 +371,25 @@ document.addEventListener("DOMContentLoaded", () => {
 
   respondText("Animations on. Use /week, /policy, /quiz, /break, /swap. Toggle FX in the header.");
 });
+respondText("Animations on. Use /week, /policy, /quiz, /break, /swap. Toggle FX in the header.");
+// --- Show Auth0 user info (name + picture) ---
+(async () => {
+  try {
+    if (window.NF && NF.getUserSafe) {
+      const user = await NF.getUserSafe();
+      if (user && user.raw) {
+        const name = user.raw.name || user.raw.email || "Crew Member";
+        const pic = user.raw.picture;
+        const nameEl = document.getElementById("userName");
+        const picEl = document.getElementById("userPic");
+        if (nameEl) nameEl.textContent = `Welcome, ${name.split(" ")[0]} 👋`;
+        if (picEl && pic) {
+          picEl.src = pic;
+          picEl.style.display = "block";
+        }
+      }
+    }
+  } catch (e) {
+    console.warn("Could not load user info:", e);
+  }
+})();

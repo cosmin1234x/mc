@@ -13,11 +13,10 @@
   <header class="topbar">
     <div class="brand"><span class="arch glow">M</span><span>cCrew AI</span></div>
     <div class="spacer"></div>
-    <span id="who" class="ghost" style="border:none;cursor:default"></span>
-    <button id="toggleFX" class="ghost">FX: On</button>
-    <button id="openAdmin" class="ghost">Admin</button>
-    <button id="logout" class="ghost" style="display:none">Logout</button>
-  </header>
+  <div id="userInfo" class="ghost" style="display:flex;align-items:center;gap:8px;border:none;cursor:default">
+  <img id="userPic" src="" alt="" style="width:30px;height:30px;border-radius:50%;display:none">
+  <span id="userName"></span>
+</div>
 
   <main class="layout fade-in">
     <!-- left panel + chat (same as yours) -->

@@ -33,7 +33,7 @@
       <div class="body">
         <p>Use your Auth0 account to continue.</p>
         <div class="row">
-          <button id="btnSignIn" class="send" type="button">Sign in</button>
+          <a class="send" href="./app.html" style="text-decoration:none;display:inline-block">Open App / Sign in</a>
           <button id="btnSignUp" class="ghost" type="button">Create account</button>
         </div>
         <p class="hint" id="err" hidden></p>
@@ -45,9 +45,11 @@
     </div>
   </div>
 
-<script defer src="https://cdn.jsdelivr.net/npm/@auth0/auth0-spa-js@2/dist/auth0-spa-js.production.js"></script>
-<script defer src="./auth-auth0.js"></script>
-<script defer src="./login-auth0.js"></script>
-
+  <!-- Auth0 SPA SDK -->
+  <script defer src="https://cdn.jsdelivr.net/npm/@auth0/auth0-spa-js@2/dist/auth0-spa-js.production.js"></script>
+  <!-- NF shim on top of Auth0 -->
+  <script defer src="./auth-auth0.js"></script>
+  <!-- Login wiring: only the Sign Up button here; Sign In goes via app.html -->
+  <script defer src="./login-auth0.js"></script>
 </body>
 </html>

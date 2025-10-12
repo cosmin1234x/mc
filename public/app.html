@@ -8,18 +8,28 @@
   <link rel="stylesheet" href="./styles.css" />
 </head>
 <body>
+  <!-- FX canvas (confetti) -->
   <canvas id="fx" class="fx"></canvas>
 
   <header class="topbar">
-    <div class="brand"><span class="arch glow">M</span><span>cCrew AI</span></div>
+    <div class="brand">
+      <span class="arch glow">M</span><span>cCrew AI</span>
+    </div>
     <div class="spacer"></div>
-  <div id="userInfo" class="ghost" style="display:flex;align-items:center;gap:8px;border:none;cursor:default">
-  <img id="userPic" src="" alt="" style="width:30px;height:30px;border-radius:50%;display:none">
-  <span id="userName"></span>
-</div>
+
+    <!-- User info (name + picture) -->
+    <div id="userInfo" class="ghost" style="display:flex;align-items:center;gap:8px;border:none;cursor:default">
+      <img id="userPic" src="" alt="" style="width:30px;height:30px;border-radius:50%;display:none">
+      <span id="userName"></span>
+    </div>
+
+    <button id="toggleFX" class="ghost">FX: On</button>
+    <button id="openAdmin" class="ghost">Admin</button>
+    <button id="logout" class="ghost" style="display:none">Logout</button>
+  </header>
 
   <main class="layout fade-in">
-    <!-- left panel + chat (same as yours) -->
+    <!-- Left: quick actions -->
     <aside class="panel">
       <h2>Quick Actions</h2>
       <div class="quick-grid">
@@ -52,6 +62,7 @@
       </div>
     </aside>
 
+    <!-- Right: chat -->
     <section class="chat">
       <div id="chatLog" class="chat-log">
         <div class="bot msg slide-in">
@@ -67,6 +78,7 @@
     </section>
   </main>
 
+  <!-- Admin Panel -->
   <dialog id="adminModal">
     <form method="dialog" class="admin">
       <header>
@@ -107,9 +119,11 @@
   </footer>
 
   <div id="toasts" class="toasts"></div>
-<script defer src="https://cdn.jsdelivr.net/npm/@auth0/auth0-spa-js@2/dist/auth0-spa-js.production.js"></script>
-<script defer src="./auth-auth0.js"></script>
-<script defer src="./app.js"></script> <!-- (or login-auth0.js on index.html) -->
 
+  <!-- Auth0 SDK + NF shim -->
+  <script defer src="https://cdn.jsdelivr.net/npm/@auth0/auth0-spa-js@2/dist/auth0-spa-js.production.js"></script>
+  <script defer src="./auth-auth0.js"></script>
+  <!-- Your app logic -->
+  <script defer src="./app.js"></script>
 </body>
 </html>

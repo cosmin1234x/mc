@@ -1,6 +1,5 @@
-/* login-auth0.js — wire login/signup buttons to Auth0 via NF shim */
+/* login-auth0.js — trigger signup via NF shim from landing page */
 document.addEventListener("DOMContentLoaded", () => {
-  const btnSignIn = document.getElementById("btnSignIn");
   const btnSignUp = document.getElementById("btnSignUp");
   const err = document.getElementById("err");
 
@@ -10,21 +9,12 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   ready(() => {
-    btnSignIn?.addEventListener("click", async () => {
-      try{
-        const next = new URLSearchParams(location.search).get("next") || "app.html";
-        await NF.signIn(next);
-      }catch(e){
-        console.error(e); err.hidden = false; err.textContent = "Could not start sign in.";
-      }
-    });
-
     btnSignUp?.addEventListener("click", async () => {
       try{
-        const next = new URLSearchParams(location.search).get("next") || "app.html";
-        await NF.signUp(next);
+        await NF.signUp("/app.html");
       }catch(e){
-        console.error(e); err.hidden = false; err.textContent = "Could not start sign up.";
+        console.error(e);
+        if (err) { err.hidden = false; err.textContent = "Could not start sign up."; }
       }
     });
   });

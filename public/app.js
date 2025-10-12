@@ -4,19 +4,29 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (typeof NF === "undefined" || !NF.requireAuth) return;
     const user = await NF.requireAuth("/"); // redirect to login if needed
     if (user) {
-      const who = document.getElementById("who");
       const logoutBtn = document.getElementById("logout");
-      if (who) who.textContent = user.email;
       if (logoutBtn) {
         logoutBtn.style.display = "inline-block";
         logoutBtn.onclick = (e) => { e.preventDefault(); NF.signOut("/"); };
       }
+      // Show name + picture
+      try{
+        const u = await NF.getUserSafe();
+        const name = u?.raw?.name || u?.email || "Crew Member";
+        const pic  = u?.raw?.picture;
+        const nameEl = document.getElementById("userName");
+        const picEl  = document.getElementById("userPic");
+        if (nameEl) nameEl.textContent = `Welcome, ${name.split(" ")[0]} 👋`;
+        if (picEl && pic) { picEl.src = pic; picEl.style.display = "block"; }
+      }catch{}
     }
   }
   if (window.NF) start(); else window.addEventListener("nf-ready", start, { once:true });
 });
 
-/* ---- App (unchanged core features) ---- */
+/* McCrew AI — One-page app (logic) */
+
+/* quiz first to avoid TDZ */
 var quiz = null;
 const QUIZ_QUESTIONS = [
   { q:"How long should proper handwashing take?", a:["At least 10s","At least 20s","Until hands feel dry"], correct:1 },
@@ -98,7 +108,7 @@ document.addEventListener("DOMContentLoaded", () => {
   function paydayAfter(dateISO, freq){ const [Y,M,D]=dateISO.split("-").map(Number); const d=new Date(Y,M-1,D); if (freq==="weekly") d.setDate(d.getDate()+7); else if (freq==="biweekly") d.setDate(d.getDate()+14); else if (freq==="monthly") d.setMonth(d.getMonth()+1); return ymdLocal(d); }
 
   /* ---- Persistence ---- */
-  const LS_KEY = "mccrew_ai_polished_v5";
+  const LS_KEY = "mccrew_ai_polished_v6";
   let fxOn = true;
   try { const raw = localStorage.getItem(LS_KEY); if (raw) { const data = JSON.parse(raw); ["employees","payConfig","swaps"].forEach(k=>{ if(data[k]) store[k]=data[k]; }); fxOn = data.fxOn ?? true; } } catch(e){ warn(e.message); }
   const persist = () => { try { localStorage.setItem(LS_KEY, JSON.stringify({ ...store, fxOn })); } catch(e){ warn(e.message); } };
@@ -112,7 +122,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const fxCanvas = $("fx"), toasts = $("toasts"), toggleFXBtn = $("toggleFX");
   const on = (el, ev, fn)=> el?.addEventListener?.(ev, fn);
 
-  /* ---- KB render ---- */
+  /* ---- Render KB ---- */
   if (kbList){
     KB.forEach(item=>{
       const li = document.createElement("li");
@@ -135,7 +145,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-  /* ---- Admin modal ---- */
+  /* ---- Admin open/close ---- */
   on(openAdminBtn,"click", ()=>{ adminModal?.showModal?.(); renderEmpTable(); initPayConfigFields(); });
   on(closeAdminBtn,"click", ()=> adminModal?.close?.());
   on(adminModal,"cancel", (e)=>{ e.preventDefault(); adminModal.close(); });
@@ -177,6 +187,7 @@ document.addEventListener("DOMContentLoaded", () => {
   function handleMessage(raw){
     const text = raw.toLowerCase();
 
+    // quiz answers
     if (quiz && quiz.active && !text.startsWith("/")){
       const pick = text.trim()[0]?.toLowerCase();
       const idx = "abc123".indexOf(pick);
@@ -323,6 +334,7 @@ document.addEventListener("DOMContentLoaded", () => {
       el.innerHTML = `<b>Break timer:</b> ${mm}:${ss}`;
       if (left<=0){ clearInterval(t); respondText("⏰ Break finished — please return to station per policy."); beep(880,200); setTimeout(()=>beep(660,180),220); setTimeout(()=>beep(880,240),440); toast("Break finished","warn"); }
     }, 250);
+    breakTimers.add(t);
   }
   function handleSwap(raw){
     const parts = raw.split(" ").filter(Boolean);
@@ -338,7 +350,7 @@ document.addEventListener("DOMContentLoaded", () => {
     respondHTML(`<p><b>Latest swap requests</b></p><ul>${html}</ul>`);
   }
 
-  /* ---- KB search ---- */
+  /* ---- KB search helpers ---- */
   function scoreKB(entry, term){ term=term.toLowerCase(); let score=0; if (entry.topic.toLowerCase().includes(term)) score+=3; if (entry.answer.toLowerCase().includes(term)) score+=1; entry.keywords.forEach(k=>{ if (k.includes(term) || term.includes(k)) score+=2; }); return score; }
   function rankedKB(term){ return KB.map(k=>({ ...k, _s:scoreKB(k,term)})).filter(k=>k._s>0).sort((a,b)=>b._s-a._s); }
   function bestKB(text){ return rankedKB(text)[0] || null; }
@@ -371,25 +383,3 @@ document.addEventListener("DOMContentLoaded", () => {
 
   respondText("Animations on. Use /week, /policy, /quiz, /break, /swap. Toggle FX in the header.");
 });
-respondText("Animations on. Use /week, /policy, /quiz, /break, /swap. Toggle FX in the header.");
-// --- Show Auth0 user info (name + picture) ---
-(async () => {
-  try {
-    if (window.NF && NF.getUserSafe) {
-      const user = await NF.getUserSafe();
-      if (user && user.raw) {
-        const name = user.raw.name || user.raw.email || "Crew Member";
-        const pic = user.raw.picture;
-        const nameEl = document.getElementById("userName");
-        const picEl = document.getElementById("userPic");
-        if (nameEl) nameEl.textContent = `Welcome, ${name.split(" ")[0]} 👋`;
-        if (picEl && pic) {
-          picEl.src = pic;
-          picEl.style.display = "block";
-        }
-      }
-    }
-  } catch (e) {
-    console.warn("Could not load user info:", e);
-  }
-})();

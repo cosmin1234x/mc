@@ -1,9 +1,10 @@
-/* auth-auth0.js — SPA PKCE, single callback on /app.html */
+/* auth-auth0.js — SPA PKCE with single callback on /app.html */
 (function () {
   const AUTH0_DOMAIN    = "cosminshynia2.uk.auth0.com";
-  const AUTH0_CLIENT_ID = "7nbjkWbQ7DkUmJRqXRxB8q9WAy7vofbw";
-  const CALLBACK_PATH   = "/app.html";   // MUST match Allowed Callback URLs exactly
-  const APP_PATH        = "/app.html";   // where your UI lives
+  const AUTH0_CLIENT_ID = "5Ss8SxEwDMUeJV8PvqmuUwUFCdSNHbQv";
+  const AUTH0_AUDIENCE  = "";             // optional (only if calling your API)
+  const CALLBACK_PATH   = "/app.html";    // MUST match Allowed Callback URLs
+  const APP_PATH        = "/app.html";
 
   let auth0Client = null;
 
@@ -13,12 +14,15 @@
     auth0Client = await auth0.createAuth0Client({
       domain: AUTH0_DOMAIN,
       clientId: AUTH0_CLIENT_ID,
-      authorizationParams: { redirect_uri: window.location.origin + CALLBACK_PATH },
+      authorizationParams: {
+        redirect_uri: window.location.origin + CALLBACK_PATH,
+        ...(AUTH0_AUDIENCE ? { audience: AUTH0_AUDIENCE } : {})
+      },
       cacheLocation: "localstorage",
       useRefreshTokens: true
     });
 
-    // Finish Auth0 redirect if we have code/state
+    // Finish PKCE exchange if we just came back from Auth0
     const sp = new URLSearchParams(window.location.search);
     if (sp.has("code") && sp.has("state")) {
       try {
@@ -29,7 +33,7 @@
         return;
       } catch (e) {
         console.error("Auth0 callback error:", e);
-        console.error("Check: SPA app, Authorization Code grant, exact callback URLs, domain.");
+        alert("Login failed. Check SPA type, grant types, and exact callback URLs.");
       }
     }
 
@@ -42,7 +46,12 @@
       try{
         if (!await auth0Client.isAuthenticated()) return null;
         const u = await auth0Client.getUser();
-        return { email: u?.email || u?.name || "", sub: u?.sub || "", jwt: async()=>auth0Client.getTokenSilently().catch(()=>null), raw: u };
+        return {
+          email: u?.email || u?.name || "",
+          sub: u?.sub || "",
+          jwt: async () => auth0Client.getTokenSilently().catch(()=>null),
+          raw: u
+        };
       }catch{ return null; }
     }
 
@@ -67,13 +76,24 @@
     }
     async function signUp(next=APP_PATH){
       await auth0Client.loginWithRedirect({
-        authorizationParams: { redirect_uri: window.location.origin + CALLBACK_PATH, screen_hint: "signup" },
+        authorizationParams: {
+          redirect_uri: window.location.origin + CALLBACK_PATH,
+          screen_hint: "signup"
+        },
         appState: { next }
       });
     }
 
-    window.NF = { provider:"auth0", getUserSafe, requireAuth, signOut, signIn, signUp,
-      auth:{ login: async()=>signIn(), signup: async()=>signUp() } };
+    // Netlify-like shim your app uses
+    window.NF = {
+      provider:"auth0",
+      getUserSafe,
+      requireAuth,
+      signOut,
+      signIn,
+      signUp,
+      auth:{ login: async()=>signIn(), signup: async()=>signUp() } // legacy
+    };
   }
 
   init().catch(err => console.error("Auth0 init failed", err));

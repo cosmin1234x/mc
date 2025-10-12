@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="./styles.css" />
 </head>
 <body>
-  <!-- FX canvas (confetti) -->
+  <!-- FX canvas (confetti always on) -->
   <canvas id="fx" class="fx"></canvas>
 
   <!-- Top App Bar -->
@@ -19,11 +19,10 @@
     <div class="spacer"></div>
 
     <!-- Minimal header controls -->
-    <button id="toggleFX" class="ghost" type="button" title="Toggle confetti">FX: On</button>
     <button id="openAdmin" class="ghost" type="button" title="Open admin">Admin</button>
     <button id="logout" class="ghost" type="button" style="display:none">Logout</button>
 
-    <!-- Profile pill (filled by app.js via Auth0) -->
+    <!-- Profile pill (filled by Auth0) -->
     <div id="userInfo" class="user-pill">
       <img id="userPic" alt="" />
       <span id="userName">Crew</span>
@@ -42,7 +41,6 @@
           </div>
         </div>
 
-        <!-- Single input (keeps your app.js happy) -->
         <form id="chatForm" class="chat-input">
           <input id="chatText" placeholder="Type /help or ask a rule…" autocomplete="off" />
           <button type="submit" class="send">Send</button>
@@ -50,7 +48,7 @@
       </div>
     </section>
 
-    <!-- Side rail: Employee ID + Knowledge (auto-populated by app.js) -->
+    <!-- Side rail -->
     <aside class="side-col">
       <div class="card">
         <h3>Your Employee ID</h3>
@@ -67,7 +65,7 @@
     </aside>
   </main>
 
-  <!-- Admin Modal (same IDs so your app.js wiring works) -->
+  <!-- Admin Modal -->
   <dialog id="adminModal">
     <form method="dialog" class="admin">
       <header>
@@ -113,5 +111,6 @@
   <script defer src="https://cdn.jsdelivr.net/npm/@auth0/auth0-spa-js@2/dist/auth0-spa-js.production.js"></script>
   <script defer src="./auth-auth0.js"></script>
   <script defer src="./app.js"></script>
+  <script defer src="./fx-always-on.js"></script>
 </body>
 </html>

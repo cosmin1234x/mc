@@ -7,91 +7,55 @@
   <title>McCrew AI — App</title>
   <link rel="stylesheet" href="./styles.css" />
 </head>
-<body class="mcd">
-  <!-- Confetti -->
+<body>
+  <!-- FX canvas (confetti) -->
   <canvas id="fx" class="fx"></canvas>
 
-  <!-- App Bar -->
+  <!-- Top App Bar -->
   <header class="appbar">
-    <button id="navToggle" class="icon ghost" type="button" aria-label="Open menu">☰</button>
-
     <div class="brand">
       <span class="arch">M</span><span>cCrew AI</span>
     </div>
-
     <div class="spacer"></div>
 
-    <div class="searchbar">
-      <input id="chatText" placeholder="Type /help or ask a rule…" autocomplete="off" />
-      <button id="sendTop" class="send" type="button">Send</button>
-    </div>
+    <!-- Minimal header controls -->
+    <button id="toggleFX" class="ghost" type="button" title="Toggle confetti">FX: On</button>
+    <button id="openAdmin" class="ghost" type="button" title="Open admin">Admin</button>
+    <button id="logout" class="ghost" type="button" style="display:none">Logout</button>
 
+    <!-- Profile pill (filled by app.js via Auth0) -->
     <div id="userInfo" class="user-pill">
       <img id="userPic" alt="" />
       <span id="userName">Crew</span>
-      <button id="userMenuBtn" class="icon ghost" type="button" aria-haspopup="menu">▾</button>
-      <div id="userMenu" class="menu" role="menu" hidden>
-        <button id="menuProfile" role="menuitem" type="button">Profile</button>
-        <button id="menuToggleFX" role="menuitem" type="button">Toggle FX</button>
-        <button id="menuAdmin" role="menuitem" type="button">Admin</button>
-        <hr/>
-        <button id="menuLogout" role="menuitem" type="button" class="danger">Logout</button>
-      </div>
     </div>
-
-    <button id="toggleFX" class="ghost" type="button">FX: On</button>
-    <button id="openAdmin" class="ghost" type="button">Admin</button>
-    <button id="logout" class="ghost" type="button" style="display:none">Logout</button>
   </header>
 
-  <!-- Side Drawer -->
-  <aside id="drawer" class="drawer" aria-label="Main">
-    <div class="drawer-head">
-      <div class="brand">
-        <span class="arch">M</span><span>cCrew AI</span>
-      </div>
-      <button id="navClose" class="icon ghost" type="button" aria-label="Close menu">✕</button>
-    </div>
-
-    <nav class="nav">
-      <button class="nav-item" type="button" data-nav="dashboard">Dashboard</button>
-      <button class="nav-item" type="button" data-nav="chat">Chat</button>
-      <button class="nav-item" type="button" data-nav="knowledge">Knowledge</button>
-      <button class="nav-item" type="button" data-nav="swaps">Swap Board</button>
-      <button class="nav-item" type="button" id="navAdmin">Admin</button>
-      <hr/>
-      <button class="nav-item" type="button" id="navFX">Toggle FX</button>
-      <button class="nav-item danger" type="button" id="navLogout">Logout</button>
-    </nav>
-
-    <div class="drawer-foot">
-      <small>Demo UI • Replace mock data with your sources.</small>
-    </div>
-  </aside>
-
-  <!-- Page Content -->
+  <!-- Content -->
   <main class="shell">
-    <!-- Left Column: Actions & Knowledge -->
-    <section class="left rail">
-      <div class="card">
-        <h3>Quick Actions</h3>
-        <div class="quick-grid">
-          <button class="quick" type="button" data-msg="/shift">Today’s Shift</button>
-          <button class="quick" type="button" data-msg="/pay">Today’s Pay</button>
-          <button class="quick" type="button" data-msg="/nextpay">Next Paycheck</button>
-          <button class="quick" type="button" data-msg="/week">This Week</button>
-          <button class="quick" type="button" data-msg="/quiz start">Training Quiz</button>
-          <button class="quick" type="button" data-msg="/break 20">Start 20-min Break</button>
-          <button class="quick" type="button" data-msg="/policy uniform">Policy: Uniform</button>
-          <button class="quick" type="button" data-msg="/policy allergen">Policy: Allergen</button>
+    <!-- Primary: Chat -->
+    <section class="main-col">
+      <div class="card chat-card">
+        <div id="chatLog" class="chat-log">
+          <div class="bot msg">
+            <p>Welcome to <b>McCrew AI</b>. Ask me about rules, training, shifts & pay.</p>
+            <p>Commands: <code>/help</code>, <code>/shift</code>, <code>/week</code>, <code>/pay</code>, <code>/nextpay</code>, <code>/policy &lt;term&gt;</code>, <code>/quiz start</code>, <code>/break 20</code>, <code>/swap &lt;date time-range note&gt;</code>, <code>/swaps</code>.</p>
+          </div>
         </div>
-      </div>
 
+        <!-- Single input (keeps your app.js happy) -->
+        <form id="chatForm" class="chat-input">
+          <input id="chatText" placeholder="Type /help or ask a rule…" autocomplete="off" />
+          <button type="submit" class="send">Send</button>
+        </form>
+      </div>
+    </section>
+
+    <!-- Side rail: Employee ID + Knowledge (auto-populated by app.js) -->
+    <aside class="side-col">
       <div class="card">
         <h3>Your Employee ID</h3>
         <div class="row">
           <input id="empId" placeholder="e.g. 1234" />
-          <button class="ghost" id="saveEmpId" type="button">Save</button>
         </div>
         <small>Used for shift & pay lookups (demo data).</small>
       </div>
@@ -100,26 +64,10 @@
         <h3>Knowledge</h3>
         <ul id="kbList" class="kb-list"></ul>
       </div>
-    </section>
-
-    <!-- Right Column: Chat -->
-    <section class="right main">
-      <div class="card chat-card">
-        <div id="chatLog" class="chat-log">
-          <div class="bot msg">
-            <p>Welcome to <b>McCrew AI</b>. Ask me about rules, training, shifts & pay.</p>
-            <p>Commands: <code>/help</code>, <code>/shift</code>, <code>/week</code>, <code>/pay</code>, <code>/nextpay</code>, <code>/policy &lt;term&gt;</code>, <code>/quiz start</code>, <code>/break 20</code>, <code>/swap &lt;date time-range note&gt;</code>, <code>/swaps</code>.</p>
-          </div>
-        </div>
-        <form id="chatForm" class="chat-input">
-          <input id="chatTextBottom" placeholder="Type /help or ask a rule…" autocomplete="off" />
-          <button type="submit" class="send">Send</button>
-        </form>
-      </div>
-    </section>
+    </aside>
   </main>
 
-  <!-- Admin Modal -->
+  <!-- Admin Modal (same IDs so your app.js wiring works) -->
   <dialog id="adminModal">
     <form method="dialog" class="admin">
       <header>
@@ -161,12 +109,9 @@
 
   <div id="toasts" class="toasts"></div>
 
-  <!-- Auth0 SDK + NF shim -->
+  <!-- Auth + App -->
   <script defer src="https://cdn.jsdelivr.net/npm/@auth0/auth0-spa-js@2/dist/auth0-spa-js.production.js"></script>
   <script defer src="./auth-auth0.js"></script>
-  <!-- App logic -->
   <script defer src="./app.js"></script>
-  <!-- UI wiring -->
-  <script defer src="./ui.js"></script>
 </body>
 </html>

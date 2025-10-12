@@ -3,53 +3,92 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <meta name="theme-color" content="#ffc000" />
+  <meta name="theme-color" content="#a51d14" />
   <title>Sign in • McCrew AI</title>
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64'%3E%3Crect width='64' height='64' fill='%23FFC72C'/%3E%3Ctext x='50%25' y='55%25' font-size='42' text-anchor='middle'%3EM%3C/text%3E%3C/svg%3E">
-  <link rel="stylesheet" href="./styles.css" />
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" />
   <style>
-    .login-wrap{min-height:100vh; display:grid; place-items:center; padding:24px}
-    .card{background:#fff; border:1px solid var(--line); border-radius:18px; box-shadow:0 10px 30px rgba(0,0,0,.08); width:min(480px, 92vw); overflow:hidden}
-    .card header{padding:16px 18px; border-bottom:1px solid var(--line); background:#fff7df}
-    .brand{font-weight:900; display:flex; gap:8px; align-items:center}
-    .arch{background:var(--mc-gold); color:#000; font-size:20px; border-radius:8px; padding:0 9px}
-    .body{padding:18px; display:grid; gap:14px}
-    .send{padding:12px 16px; border-radius:12px; border:0; color:#1a1a1a; font-weight:900; cursor:pointer; background:linear-gradient(90deg,var(--mc-gold), var(--mc-gold-2), var(--mc-red)); background-size:200% 100%; animation:btnflow 4s linear infinite; box-shadow:0 6px 16px rgba(218,41,28,.18)}
-    .row{display:flex; gap:10px; flex-wrap:wrap}
-    .ghost{border:1px solid var(--line); background:#fff; border-radius:12px; padding:10px 14px; cursor:pointer}
-    .hint{color:#6a6f78; font-size:12px}
-    @keyframes btnflow{0%{background-position:0 0}100%{background-position:200% 0}}
+    :root{
+      --mc-red:#a51d14; --mc-gold:#f3bf26; --ink:#e9eaee; --muted:#c8cad3;
+      --bg:#16171a; --panel:#1c1e22; --line:#2a2d33;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; color:var(--ink); background:
+        radial-gradient(900px 600px at 110% -10%, #2a1210 0%, transparent 55%),
+        radial-gradient(900px 600px at -10% 110%, #2a1210 0%, transparent 55%),
+        linear-gradient(180deg,#1b1c20,#16171a 50%,#141518);
+      font:16px/1.5 system-ui, Segoe UI, Roboto, Helvetica, Arial;
+    }
+    .wrap{min-height:100vh; display:grid; place-items:center; padding:32px}
+    .card{
+      width:min(880px,95vw); border:1px solid var(--line); background:var(--panel); border-radius:18px;
+      overflow:hidden; display:grid; grid-template-columns: 1.15fr 1fr;
+    }
+    .hero{
+      position:relative; padding:28px; background:
+        linear-gradient(180deg,#201011, #1b0c0d 60%, #1a0b0c);
+      color:#fff; display:flex; flex-direction:column; gap:14px; justify-content:center;
+    }
+    .hero .brand{display:flex; align-items:center; gap:10px; font-weight:900; font-size:22px}
+    .hero .arch{background:var(--mc-gold); color:#000; padding:0 12px; border-radius:10px; box-shadow:0 1px 0 #cfab10 inset}
+    .hero h1{margin:6px 0 0; font-size:28px}
+    .hero p{margin:0; color:#f0d7d5}
+    .hero .pill{display:inline-flex; gap:8px; align-items:center; border:1px solid #ffffff33; background:#ffffff1a; padding:6px 10px; border-radius:999px; width:max-content}
+    .form{
+      padding:28px; display:grid; gap:16px; background:var(--panel);
+    }
+    .row{display:flex; flex-wrap:wrap; gap:10px}
+    .btn{
+      padding:12px 14px; border-radius:12px; border:1px solid var(--line);
+      cursor:pointer; color:#121316; font-weight:900; background:linear-gradient(90deg,#f3bf26,#ffc72c,#a51d14);
+      background-size:200% 100%;
+    }
+    .btn.alt{background:#24262b; color:var(--ink); border-color:#343841}
+    .hint{font-size:12px; color:var(--muted)}
+    .foot{padding:14px 18px; color:#b9bbc5; border-top:1px solid var(--line); background:#191a1e}
+    @media (max-width:900px){ .card{grid-template-columns:1fr} .hero{order:2} .form{order:1} }
   </style>
 </head>
 <body>
-  <div id="toasts" class="toasts"></div>
-
-  <div class="login-wrap">
+  <div class="wrap">
     <div class="card">
-      <header>
+      <section class="hero">
         <div class="brand"><span class="arch">M</span><span>cCrew AI</span></div>
-      </header>
+        <h1>Welcome back</h1>
+        <p>Shift help, store policies, and training — all in one place.</p>
+        <span class="pill">Secure Auth • Auth0 + PKCE</span>
+      </section>
 
-      <div class="body">
-        <p>Use your Auth0 account to continue.</p>
-        <div class="row">
-          <a class="send" href="./app.html" style="text-decoration:none;display:inline-block">Open App / Sign in</a>
-          <button id="btnSignUp" class="ghost" type="button">Create account</button>
+      <section class="form">
+        <div class="row" style="gap:12px">
+          <button id="btnSignIn" class="btn" type="button">Sign in</button>
+          <button id="btnSignUp" class="btn alt" type="button">Create account</button>
         </div>
-        <p class="hint" id="err" hidden></p>
-      </div>
+        <div class="hint">Tip: you can sign up with email/password if enabled for your tenant.</div>
+        <div class="hint">You’ll be redirected to <code>/app.html</code> after authentication.</div>
+      </section>
 
-      <div class="foot-note" style="padding:12px 18px; border-top:1px solid var(--line); background:#fffaf2; font-size:12px; color:#6a6f78">
-        Auth powered by Auth0 Universal Login.
+      <div class="foot" style="grid-column:1/-1">
+        Powered by Auth0 • McCrew AI
       </div>
     </div>
   </div>
 
-  <!-- Auth0 SPA SDK -->
+  <!-- Auth0 SDK + NF shim -->
   <script defer src="https://cdn.jsdelivr.net/npm/@auth0/auth0-spa-js@2/dist/auth0-spa-js.production.js"></script>
-  <!-- NF shim on top of Auth0 -->
   <script defer src="./auth-auth0.js"></script>
-  <!-- Login wiring: only the Sign Up button here; Sign In goes via app.html -->
-  <script defer src="./login-auth0.js"></script>
+  <script>
+    // Minimal login wiring (calls NF.signIn / NF.signUp)
+    function onNFReady(fn){ if (window.NF) fn(); else window.addEventListener("nf-ready", fn, {once:true}); }
+    document.addEventListener("DOMContentLoaded", () => {
+      const signIn = document.getElementById("btnSignIn");
+      const signUp = document.getElementById("btnSignUp");
+      onNFReady(() => {
+        signIn?.addEventListener("click", () => NF.signIn("/app.html"));
+        signUp?.addEventListener("click", () => NF.signUp("/app.html"));
+      });
+    });
+  </script>
 </body>
 </html>

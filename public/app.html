@@ -84,7 +84,7 @@
     #empTable th,#empTable td{border-bottom:1px solid #2b2e35; padding:8px 10px; text-align:left; color:#e3e5ea}
     #empTable tr:last-child td{border-bottom:0}
 
-    /* FX canvases */
+    /* FX canvases (sparkles layer + optional confetti layer if you use it) */
     .fx{position:fixed; inset:0; width:100vw; height:100vh; pointer-events:none}
     #sparkle.fx{z-index:4; opacity:.55; filter:saturate(1.05)}
     #fx.fx{z-index:5}
@@ -108,9 +108,9 @@
   </style>
 </head>
 <body>
-  <!-- Ambient sparkles below any celebration FX -->
+  <!-- Ambient sparkles (subtle, always on) -->
   <canvas id="sparkle" class="fx"></canvas>
-  <!-- Your event FX (confetti) canvas retained -->
+  <!-- Optional confetti canvas if your app.js triggers confetti(...) -->
   <canvas id="fx" class="fx"></canvas>
 
   <!-- Top App Bar -->
@@ -202,14 +202,13 @@
 
   <div id="toasts" class="toasts"></div>
 
-  <!-- Auth + App logic -->
+  <!-- Auth0 SDK + shim + your app logic -->
   <script defer src="https://cdn.jsdelivr.net/npm/@auth0/auth0-spa-js@2/dist/auth0-spa-js.production.js"></script>
   <script defer src="./auth-auth0.js"></script>
   <script defer src="./app.js"></script>
 
-  <!-- Subtle sparkles (always on) -->
+  <!-- Subtle sparkles (inline, lightweight) -->
   <script>
-  // fx-sparkle (inline to keep it simple)
   document.addEventListener("DOMContentLoaded", () => {
     const canvas = document.getElementById("sparkle"); if(!canvas) return;
     const ctx = canvas.getContext("2d", { alpha:true });
@@ -235,25 +234,46 @@
   });
   </script>
 
-  <!-- Robust greeting fix: runs on nf-ready + visibility/page restore -->
+  <!-- Greeting/photo: render immediately from cache, then refresh when NF/Auth ready -->
   <script>
-  function onNFReady(fn){ if (window.NF) fn(); else window.addEventListener("nf-ready", fn, {once:true}); }
-  async function updateUserGreeting(){
-    try{
-      if (!window.NF || !NF.getUserSafe) return;
-      const u = await NF.getUserSafe(); if (!u || !u.raw) return;
-      const name = u.raw.name || u.email || "Crew";
-      const pic  = u.raw.picture;
-      const nameEl = document.getElementById("userName");
-      const picEl  = document.getElementById("userPic");
-      if (nameEl) nameEl.textContent = `Hello, ${name.split(" ")[0]} 👋`;
-      if (picEl && pic){ picEl.src = pic; picEl.style.display = "block"; }
-    }catch(e){ console.warn("User info not ready:", e); }
-  }
-  document.addEventListener("DOMContentLoaded", ()=> onNFReady(updateUserGreeting));
-  window.addEventListener("nf-ready", updateUserGreeting);
-  window.addEventListener("pageshow", updateUserGreeting);        // back/forward cache on mobile
-  document.addEventListener("visibilitychange", ()=>{ if(!document.hidden) updateUserGreeting(); });
+  (function(){
+    const nameEl = document.getElementById("userName");
+    const picEl  = document.getElementById("userPic");
+    const LS_LAST_USER = "mccrew:last_user";
+
+    function render(basic){
+      if (!basic) return;
+      const first = (basic.name || basic.email || "Crew").split(" ")[0];
+      if (nameEl) nameEl.textContent = `Hello, ${first} 👋`;
+      if (picEl && basic.picture){ picEl.src = basic.picture; picEl.style.display = "block"; }
+    }
+
+    // 1) Paint from cache instantly
+    try { const cached = localStorage.getItem(LS_LAST_USER); if (cached) render(JSON.parse(cached)); } catch {}
+
+    // 2) Pull live user when ready
+    async function refreshFromLive(){
+      try {
+        if (!window.NF || !NF.getUserSafe) return;
+        const u = await NF.getUserSafe();
+        if (!u) return;
+        render({ email: u.email, name: u.name, picture: u.picture });
+      } catch {}
+    }
+
+    // 3) Retry briefly in case SDK warms up
+    async function retry(times=6, delay=200){
+      for (let i=0;i<times;i++){ await refreshFromLive(); await new Promise(r=>setTimeout(r, delay)); }
+    }
+    const run = ()=>{ refreshFromLive(); retry(); };
+
+    window.addEventListener("nf-ready", run);
+    window.addEventListener("auth:ready", run);
+    window.addEventListener("auth:change", run);
+    window.addEventListener("pageshow", (e)=>{ if (e.persisted) run(); });
+    document.addEventListener("visibilitychange", ()=>{ if (!document.hidden) run(); });
+    document.addEventListener("DOMContentLoaded", run);
+  })();
   </script>
 </body>
 </html>

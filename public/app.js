@@ -1,19 +1,26 @@
-/* McCrew AI — app.js with personalizable AI (persona + KB + context) and JSON actions */
+/* McCrew AI — app.js (dark UI compatible)
+   - Auth0 greeting + avatar via NF shim
+   - Personalizable AI (persona + KB + context)
+   - JSON action handling
+   - Topic guard: only McDonald's ops + casual chat (refuse coding/off-topic)
+   - Admin demo data (employees, pay config, swaps)
+*/
 
 (() => {
-  /* ---------- Auth guard ---------- */
+  /* ---------- Auth guard + header greeting ---------- */
   document.addEventListener("DOMContentLoaded", async () => {
     try{
       if (!window.NF || !NF.requireAuth) return console.warn("[McCrew] NF not ready (auth shim missing?)");
       const user = await NF.requireAuth("/"); // redirect to login if not logged in
       if (user) {
         const who = document.getElementById("userName");
-        if (who) {
-          const first = (user.name || user.email || "Crew").split(" ")[0];
-          who.textContent = `Hello, ${first} 👋`;
-        }
+        const first = (user.raw?.name || user.email || "Crew").split(" ")[0];
+        if (who) who.textContent = `Hello, ${first} 👋`;
+
         const pic = document.getElementById("userPic");
-        if (pic && user.picture) { pic.src = user.picture; pic.style.display = "block"; }
+        const avatar = user.raw?.picture || user.raw?.avatar || "";
+        if (pic && avatar) { pic.src = avatar; pic.style.display = "block"; }
+
         const logoutBtn = document.getElementById("logout");
         if (logoutBtn) { logoutBtn.style.display = "inline-block"; logoutBtn.onclick = (e)=>{ e.preventDefault(); NF.signOut("/"); }; }
       }
@@ -36,7 +43,7 @@
     swaps: []
   };
 
-  /* ---------- Knowledge Base (UI list) ---------- */
+  /* ---------- Knowledge Base (used for UI + AI KB) ---------- */
   const KB = [
     { topic:"Uniform Policy", keywords:["uniform","dress","appearance"], answer:
       `• Clean full uniform, name badge visible.
@@ -85,6 +92,13 @@
   }
   const clamp = (n,min,max)=>Math.max(min, Math.min(max,n));
   const escapeHTML = (s)=> s.replace(/[&<>"']/g, m=>({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;" }[m]));
+  const toast = (msg, type="")=>{
+    const box = document.getElementById("toasts"); if(!box) return;
+    const el = document.createElement("div");
+    el.className = `toast ${type}`; el.textContent = msg;
+    box.appendChild(el);
+    setTimeout(()=>{ el.classList.add("leave"); setTimeout(()=>el.remove(), 200); }, 1800);
+  };
 
   /* ---------- Persistence ---------- */
   const LS_KEY = "mccrew_ai_personal_v1";
@@ -97,7 +111,7 @@
   }catch(e){ console.warn("[McCrew]", e.message); }
   const persist = ()=>localStorage.setItem(LS_KEY, JSON.stringify({ ...store }));
 
-  /* ---------- DOM ---------- */
+  /* ---------- DOM refs ---------- */
   const chatLog = document.getElementById("chatLog");
   const chatForm = document.getElementById("chatForm");
   const chatText = document.getElementById("chatText");
@@ -118,9 +132,8 @@
 
   const fxCanvas = document.getElementById("fx");
   const toasts = document.getElementById("toasts");
-  const on = (el, ev, fn)=> el && el.addEventListener ? el.addEventListener(ev, fn) : null;
 
-  /* ---------- Knowledge list UI ---------- */
+  /* ---------- KB list (click inserts answer) ---------- */
   if (kbList){
     KB.forEach(item=>{
       const li = document.createElement("li");
@@ -134,17 +147,17 @@
   }
 
   /* ---------- Admin modal ---------- */
-  on(openAdminBtn,"click", ()=>{ adminModal?.showModal?.(); renderEmpTable(); initPayConfigFields(); });
-  on(closeAdminBtn,"click", ()=> adminModal?.close?.());
-  on(adminModal,"cancel", (e)=>{ e.preventDefault(); adminModal.close(); });
-  on(adminModal,"click", (e)=>{
+  addEvt(openAdminBtn,"click", ()=>{ adminModal?.showModal?.(); renderEmpTable(); initPayConfigFields(); });
+  addEvt(closeAdminBtn,"click", ()=> adminModal?.close?.());
+  addEvt(adminModal,"cancel", (e)=>{ e.preventDefault(); adminModal.close(); });
+  addEvt(adminModal,"click", (e)=>{
     const r = adminModal.getBoundingClientRect();
     const outside = e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom;
     if (outside) adminModal.close();
   });
-  on(adminModal,"close", persist);
+  addEvt(adminModal,"close", persist);
 
-  on(addEmpBtn,"click", ()=>{
+  addEvt(addEmpBtn,"click", ()=>{
     const id = (aEmpId?.value||"").trim(); if(!id) return;
     const name = (aName?.value||"").trim() || `Crew ${id}`;
     const rate = parseFloat(aRate?.value||"0") || 11.44;
@@ -153,14 +166,13 @@
     if (aEmpId) aEmpId.value=""; if (aName) aName.value=""; if (aRate) aRate.value="";
     renderEmpTable(); persist(); toast("Employee saved","good");
   });
-  on(savePayConfig,"click", ()=>{
+  addEvt(savePayConfig,"click", ()=>{
     if (!payFreq) return;
     store.payConfig.frequency = payFreq.value;
     store.payConfig.nextPayday = (nextPayday && nextPayday.value) || store.payConfig.nextPayday;
     persist(); toast("Pay settings updated","good");
     respondText(`Saved pay config: ${store.payConfig.frequency}, next payday ${store.payConfig.nextPayday}`);
   });
-
   function renderEmpTable(){
     if (!empTable) return;
     const rows = store.employees.map(e=>(
@@ -174,7 +186,7 @@
   function initPayConfigFields(){ if (payFreq) payFreq.value = store.payConfig.frequency; if (nextPayday) nextPayday.value = store.payConfig.nextPayday; }
 
   /* ---------- Chat core ---------- */
-  on(chatForm,"submit", async (e)=>{
+  addEvt(chatForm,"submit", async (e)=>{
     e.preventDefault();
     const text = (chatText?.value||"").trim(); if(!text) return;
     handleInput(text);
@@ -206,9 +218,10 @@
   async function handleInput(raw){
     const text = raw.trim();
     pushUser(raw);
+    const low = text.toLowerCase();
 
-    // Quiz answers if active
-    if (quiz && quiz.active && !text.startsWith("/")){
+    // Quiz answers if active (and not a command)
+    if (quiz && quiz.active && !low.startsWith("/")){
       const pick = text.trim()[0]?.toLowerCase();
       const idx = "abc123".indexOf(pick);
       if (idx !== -1){
@@ -225,8 +238,6 @@
       }
     }
 
-    const low = text.toLowerCase();
-
     // Commands
     if (low.startsWith("/help"))   return showHelp();
     if (low.startsWith("/shift"))  return handleShift();
@@ -241,11 +252,20 @@
     if (low.startsWith("/swap"))   return handleSwap(text);
     if (low.startsWith("/swaps"))  return listSwaps();
 
-    // Local intents (cheap)
-    const local = localIntents(low);
-    if (local) return respondText(local);
+    // ---------- Local topic guard (instant, saves tokens) ----------
+    const coding = /\b(html|css|javascript|js|typescript|python|react|node|express|sql|database|api|debug|compile|code|snippet|write.*code|build.*website|script)\b/i;
+    const casual = /\b(hi|hello|hey|yo|how are (you|u)|thanks|thank you|bye|goodbye|see ya|what'?s up|sup)\b/i;
+    const mcd = /(mcdonald|mccrew|crew|store|shift|rota|schedule|week|pay|payday|paycheck|overtime|break|uniform|policy|rules|allergen|food safety|handwash|fryer|drive-?thru|manager|training|quiz|swap|swaps|clock|timeclock|hold time|burger|fries|station)/i;
 
-    // Quick KB match
+    if (coding.test(low)) {
+      return respondText("I can’t help with coding or developer tasks here. I focus on McDonald’s shifts, pay, training, and store policies.");
+    }
+    if (!casual.test(low) && !mcd.test(low)) {
+      return respondText("I’m here for McDonald’s crew topics: shifts, rota, pay, breaks, policies, training, food safety, and daily store questions. Try one of those. 😊");
+    }
+    // ---------- End local topic guard ----------
+
+    // Quick KB hit
     const match = bestKB(low);
     if (match) return respondHTML(`<p><b>${match.topic}</b></p><p>${escapeHTML(match.answer).replace(/\n/g,"<br>")}</p>`);
 
@@ -268,7 +288,7 @@
   function findEmployee(idMaybe){
     const id = (idMaybe || empIdInput?.value || "").trim();
     if(!id) {
-      respondText("Add your Employee ID first (right panel).");
+      respondText("Add your Employee ID first (left panel).");
       empIdInput?.classList.add("shake"); setTimeout(()=>empIdInput?.classList.remove("shake"), 400);
       return null;
     }
@@ -346,7 +366,6 @@
       toast("Quiz started");
     } else respondText("Use: /quiz start");
   }
-
   function askQuizQuestion(){
     if (!quiz) return;
     const q = QUIZ_QUESTIONS[quiz.idx];
@@ -384,103 +403,17 @@
     respondHTML(`<p><b>Latest swap requests</b></p><ul>${html}</ul>`);
   }
 
-  /* ---------- Local intents ---------- */
-  function localIntents(low){
-    if (/^(hi|hello|hey|yo)\b/.test(low)) return "Hi 👋 I can help with shifts, pay, policies, and training.";
-    if (/how are (you|u)/.test(low)) return "Doing great — ready to help with your shift or questions.";
-    if (/thank(s| you)/.test(low)) return "You’re welcome! 🍟";
-    if (/(bye|goodbye|see ya)/.test(low)) return "See you later 👋 Have a great shift!";
-    if (/uniform/.test(low)) return "Uniform clean, name badge visible, black non-slip shoes, hair tied; follow your store standards.";
-    if (/\bbreak\b/.test(low)) return "Typical crew break is ~20 minutes if your shift goes over 4.5–6 hours (store policy may vary).";
-    if (/\bpay(day|check)?\b/.test(low)) return "You can view next payday with /nextpay or today’s estimate with /pay.";
-    return null;
-  }
-
-  /* ---------- KB search helpers ---------- */
-  function scoreKB(entry, term){
-    term = term.toLowerCase(); let score = 0;
-    if (entry.topic.toLowerCase().includes(term)) score += 3;
-    if (entry.answer.toLowerCase().includes(term)) score += 1;
-    entry.keywords.forEach(k=>{ if (k.includes(term) || term.includes(k)) score += 2; });
-    return score;
-  }
-  function rankedKB(term){ return KB.map(k=>({ ...k, _s:scoreKB(k,term)})).filter(k=>k._s>0).sort((a,b)=>b._s-a._s); }
-  function bestKB(text){ return rankedKB(text)[0] || null; }
-
-  /* ---------- Toasts ---------- */
-  function toast(msg, type=""){ if(!toasts) return;
-    const el = document.createElement("div");
-    el.className = `toast ${type}`; el.textContent = msg;
-    toasts.appendChild(el);
-    setTimeout(()=>{ el.classList.add("leave"); setTimeout(()=>el.remove(), 200); }, 1800);
-  }
-
-  /* ---------- Confetti (lightweight) ---------- */
-  let confettiActive = false, pieces = [], rafId = 0, killAt = 0;
-  const fadeMs = 350;
-  const ctx2d = fxCanvas?.getContext?.('2d');
-  function resizeFx(){ if(!fxCanvas) return; fxCanvas.width = innerWidth; fxCanvas.height = innerHeight; }
-  addEventListener('resize', resizeFx); resizeFx();
-  function clearFxCanvas(){ if (ctx2d && fxCanvas) ctx2d.clearRect(0,0,fxCanvas.width,fxCanvas.height); }
-  function stopConfetti(clear=true){ confettiActive = false; if (rafId) cancelAnimationFrame(rafId); rafId = 0; if (clear) clearFxCanvas(); pieces.length = 0; }
-  function makePieces(n){
-    const arr = []; const W = fxCanvas?.width || innerWidth, H = fxCanvas?.height || innerHeight;
-    for (let i=0;i<n;i++){
-      arr.push({ x: Math.random()*W, y: -20 - Math.random()*H*0.25, r: 4 + Math.random()*5,
-        vy: 2 + Math.random()*3, vx: -1.2 + Math.random()*2.4, rot: Math.random()*Math.PI, vr: -0.25 + Math.random()*0.5,
-        color: `hsl(${Math.random()*360},90%,60%)`, shape: Math.random()<0.5 ? 'rect' : 'circ' });
-    }
-    return arr;
-  }
-  function confetti(ms=900){
-    if (!ctx2d || !fxCanvas) return;
-    stopConfetti(false); pieces = makePieces(120); confettiActive = true;
-    const now = performance.now(); killAt = now + ms;
-    const tick = (ts) => {
-      if (!confettiActive || !ctx2d) return;
-      clearFxCanvas();
-      const timeLeft = Math.max(0, killAt - ts);
-      const alpha = timeLeft <= fadeMs ? (timeLeft / fadeMs) : 1;
-      for (const p of pieces){
-        p.vy += 0.015; p.x += p.vx; p.y += p.vy; p.rot += p.vr;
-        if (alpha === 1 && p.y > (fxCanvas.height + 20)){ p.y = -20; p.x = Math.random()*fxCanvas.width; }
-        ctx2d.save(); ctx2d.globalAlpha = alpha; ctx2d.translate(p.x, p.y); ctx2d.rotate(p.rot); ctx2d.fillStyle = p.color;
-        if (p.shape === 'rect'){ ctx2d.fillRect(-p.r, -p.r, p.r*2, p.r*2); } else { ctx2d.beginPath(); ctx2d.arc(0,0,p.r,0,Math.PI*2); ctx2d.fill(); }
-        ctx2d.restore();
-      }
-      if (ts >= killAt){ stopConfetti(true); return; }
-      rafId = requestAnimationFrame(tick);
-    };
-    rafId = requestAnimationFrame(tick);
-  }
-  
-// quick local guard so we don't even call the function for coding/off-topic
-const low = text.toLowerCase();
-const coding = /\b(html|css|javascript|js|typescript|python|react|node|express|sql|database|api|debug|compile|code|snippet|write.*code|build.*website|script)\b/i;
-const casual = /\b(hi|hello|hey|yo|how are (you|u)|thanks|thank you|bye|goodbye|see ya|what'?s up|sup)\b/i;
-const mcd = /(mcdonald|mccrew|shift|rota|schedule|week|pay|payday|paycheck|overtime|break|uniform|policy|allergen|food safety|handwash|fryer|drive-?thru|manager|training|quiz|swap|swaps|timeclock|hold time|burger|fries|station)/i;
-
-if (coding.test(low)) {
-  return respondText("I can’t help with coding or developer tasks here. I focus on McDonald’s shifts, pay, training, and store policies.");
-}
-if (!casual.test(low) && !mcd.test(low)) {
-  return respondText("I’m here for McDonald’s crew topics: shifts, rota, pay, breaks, policies, training, food safety, and daily store questions. Try one of those. 😊");
-}
-
-
-
-  /* ---------- PERSONALIZATION PLUMBING ---------- */
+  /* ---------- AI personalization plumbing ---------- */
   function buildPersona(){
     return localStorage.getItem("mccrew_persona") || `
 You are McCrew AI, a friendly assistant for our store. Keep answers short (2–4 sentences), clear and kind.
-If unsure, say it may vary by store and suggest asking a manager.`;
+If unsure, say it may vary by store and suggest asking a manager.
+Refuse coding/developer tasks and off-topic requests.`;
   }
-
   function buildKB(){
     try { return KB.map(item => `# ${item.topic}\n${item.answer}`).join("\n\n"); }
     catch { return ""; }
   }
-
   function buildContext(){
     return {
       store: { name: "Your Store Name", city: "Your City" },
@@ -518,24 +451,14 @@ If unsure, say it may vary by store and suggest asking a manager.`;
     try {
       const obj = JSON.parse(m[1]);
       if (obj.action && typeof obj.action === "string") {
-        // call back into our router
-        handleInput(obj.action);
+        handleInput(obj.action); // call back into the router
         return true;
       }
     } catch {}
     return false;
   }
 
-  /* ---------- Local intents ---------- */
-  function localIntents(low){
-    if (/^(hi|hello|hey|yo)\b/.test(low)) return "Hi 👋 I can help with shifts, pay, policies, and training.";
-    if (/how are (you|u)/.test(low)) return "Doing great — ready to help with your shift or questions.";
-    if (/thank(s| you)/.test(low)) return "You’re welcome! 🍟";
-    if (/(bye|goodbye|see ya)/.test(low)) return "See you later 👋 Have a great shift!";
-    return null;
-  }
-
-  /* ---------- KB scoring ---------- */
+  /* ---------- KB helpers ---------- */
   function scoreKB(entry, term){
     term = term.toLowerCase(); let score = 0;
     if (entry.topic.toLowerCase().includes(term)) score += 3;
@@ -546,9 +469,48 @@ If unsure, say it may vary by store and suggest asking a manager.`;
   function rankedKB(term){ return KB.map(k=>({ ...k, _s:scoreKB(k,term)})).filter(k=>k._s>0).sort((a,b)=>b._s-a._s); }
   function bestKB(text){ return rankedKB(text)[0] || null; }
 
+  /* ---------- Confetti FX (subtle) ---------- */
+  let confettiActive = false, pieces = [], rafId = 0, killAt = 0;
+  const fadeMs = 350;
+  const ctx2d = fxCanvas?.getContext?.('2d');
+  function resizeFx(){ if(!fxCanvas) return; fxCanvas.width = innerWidth; fxCanvas.height = innerHeight; }
+  addEventListener('resize', resizeFx); resizeFx();
+  function clearFxCanvas(){ if (ctx2d && fxCanvas) ctx2d.clearRect(0,0,fxCanvas.width,fxCanvas.height); }
+  function stopConfetti(clear=true){ confettiActive = false; if (rafId) cancelAnimationFrame(rafId); rafId = 0; if (clear) clearFxCanvas(); pieces.length = 0; }
+  function makePieces(n){
+    const arr = []; const W = fxCanvas?.width || innerWidth, H = fxCanvas?.height || innerHeight;
+    for (let i=0;i<n;i++){
+      arr.push({ x: Math.random()*W, y: -20 - Math.random()*H*0.25, r: 4 + Math.random()*5,
+        vy: 2 + Math.random()*3, vx: -1.2 + Math.random()*2.4, rot: Math.random()*Math.PI, vr: -0.25 + Math.random()*0.5,
+        color: `hsl(${Math.random()*360},90%,60%)`, shape: Math.random()<0.5 ? 'rect' : 'circ' });
+    }
+    return arr;
+  }
+  function confetti(ms=900){
+    if (!ctx2d || !fxCanvas) return;
+    stopConfetti(false); pieces = makePieces(120); confettiActive = true;
+    const now = performance.now(); killAt = now + ms;
+    const tick = (ts) => {
+      if (!confettiActive || !ctx2d) return;
+      clearFxCanvas();
+      const timeLeft = Math.max(0, killAt - ts);
+      const alpha = timeLeft <= fadeMs ? (timeLeft / fadeMs) : 1;
+      for (const p of pieces){
+        p.vy += 0.015; p.x += p.vx; p.y += p.vy; p.rot += p.vr;
+        if (alpha === 1 && p.y > (fxCanvas.height + 20)){ p.y = -20; p.x = Math.random()*fxCanvas.width; }
+        ctx2d.save(); ctx2d.globalAlpha = alpha; ctx2d.translate(p.x, p.y); ctx2d.rotate(p.rot); ctx2d.fillStyle = p.color;
+        if (p.shape === 'rect'){ ctx2d.fillRect(-p.r, -p.r, p.r*2, p.r*2); } else { ctx2d.beginPath(); ctx2d.arc(0,0,p.r,0,Math.PI*2); ctx2d.fill(); }
+        ctx2d.restore();
+      }
+      if (ts >= killAt){ stopConfetti(true); return; }
+      rafId = requestAnimationFrame(tick);
+    };
+    rafId = requestAnimationFrame(tick);
+  }
+
   /* ---------- Bootstrap ---------- */
   document.addEventListener("DOMContentLoaded", () => {
-    respondText("Ready. Ask me anything about shifts, pay, or policies — or use /help.");
+    respondText("Ready. Ask me about shifts, pay, or policies — or use /help.");
     try{
       const saved = localStorage.getItem("mccrew_emp_id");
       if (saved && empIdInput) empIdInput.value = saved;
@@ -557,4 +519,7 @@ If unsure, say it may vary by store and suggest asking a manager.`;
       });
     }catch{}
   });
+
+  /* ---------- Helpers ---------- */
+  function addEvt(el, ev, fn){ if (el && el.addEventListener) el.addEventListener(ev, fn); }
 })();

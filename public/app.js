@@ -453,6 +453,21 @@
     };
     rafId = requestAnimationFrame(tick);
   }
+  
+// quick local guard so we don't even call the function for coding/off-topic
+const low = text.toLowerCase();
+const coding = /\b(html|css|javascript|js|typescript|python|react|node|express|sql|database|api|debug|compile|code|snippet|write.*code|build.*website|script)\b/i;
+const casual = /\b(hi|hello|hey|yo|how are (you|u)|thanks|thank you|bye|goodbye|see ya|what'?s up|sup)\b/i;
+const mcd = /(mcdonald|mccrew|shift|rota|schedule|week|pay|payday|paycheck|overtime|break|uniform|policy|allergen|food safety|handwash|fryer|drive-?thru|manager|training|quiz|swap|swaps|timeclock|hold time|burger|fries|station)/i;
+
+if (coding.test(low)) {
+  return respondText("I can’t help with coding or developer tasks here. I focus on McDonald’s shifts, pay, training, and store policies.");
+}
+if (!casual.test(low) && !mcd.test(low)) {
+  return respondText("I’m here for McDonald’s crew topics: shifts, rota, pay, breaks, policies, training, food safety, and daily store questions. Try one of those. 😊");
+}
+
+
 
   /* ---------- PERSONALIZATION PLUMBING ---------- */
   function buildPersona(){

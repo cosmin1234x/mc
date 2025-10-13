@@ -1,29 +1,26 @@
-/* McCrew AI — full app.js (Auth0/NF guard + smart AI + admin + confetti)
-   - Requires NF shim (auth-auth0.js) loaded before this file
-   - Uses Netlify Function /.netlify/functions/ask for OpenAI answers
-   - No FX toggle; confetti runs when invoked
-*/
+/* McCrew AI — app.js with personalizable AI (persona + KB + context) and JSON actions */
 
 (() => {
-  /* ---------- Auth guard (redirect to login if not authenticated) ---------- */
+  /* ---------- Auth guard ---------- */
   document.addEventListener("DOMContentLoaded", async () => {
-    if (!window.NF || !NF.requireAuth) return console.warn("[McCrew] NF not ready (auth shim missing?)");
-    const user = await NF.requireAuth("/"); // redirect to / if not logged in
-    if (user) {
-      const who = document.getElementById("userName");
-      if (who) {
-        const first = (user.name || user.email || "Crew").split(" ")[0];
-        who.textContent = `Hello, ${first} 👋`;
+    try{
+      if (!window.NF || !NF.requireAuth) return console.warn("[McCrew] NF not ready (auth shim missing?)");
+      const user = await NF.requireAuth("/"); // redirect to login if not logged in
+      if (user) {
+        const who = document.getElementById("userName");
+        if (who) {
+          const first = (user.name || user.email || "Crew").split(" ")[0];
+          who.textContent = `Hello, ${first} 👋`;
+        }
+        const pic = document.getElementById("userPic");
+        if (pic && user.picture) { pic.src = user.picture; pic.style.display = "block"; }
+        const logoutBtn = document.getElementById("logout");
+        if (logoutBtn) { logoutBtn.style.display = "inline-block"; logoutBtn.onclick = (e)=>{ e.preventDefault(); NF.signOut("/"); }; }
       }
-      const logoutBtn = document.getElementById("logout");
-      if (logoutBtn) {
-        logoutBtn.style.display = "inline-block";
-        logoutBtn.onclick = (e) => { e.preventDefault(); NF.signOut("/"); };
-      }
-    }
+    }catch(e){ console.warn("[Auth]", e); }
   });
 
-  /* ------------------------------ Demo Data ------------------------------ */
+  /* ---------- Demo Data ---------- */
   const store = {
     employees: [
       { id: "1234", name: "Alex", hourlyRate: 11.5, plannedShifts: [
@@ -39,7 +36,7 @@
     swaps: []
   };
 
-  /* --------------------------- Knowledge Base --------------------------- */
+  /* ---------- Knowledge Base (UI list) ---------- */
   const KB = [
     { topic:"Uniform Policy", keywords:["uniform","dress","appearance"], answer:
       `• Clean full uniform, name badge visible.
@@ -53,7 +50,7 @@
 • 3 lateness events in a period triggers a review.
 • Repeated issues may affect scheduling.` },
     { topic:"Breaks", keywords:["break","rest","meal"], answer:
-      `• Typical UK crew: 20-min break if shift > 4.5 hours (store policy may vary).
+      `• Typical UK crew: ~20-min break if shift > 4.5–6 hours (store policy may vary).
 • Ask a manager to schedule around rush periods.
 • No eating in customer area while on duty.` },
     { topic:"Food Safety / Allergens", keywords:["allergen","safety","food","ccp"], answer:
@@ -61,27 +58,9 @@
 • Keep raw/ready-to-eat separate.
 • Label and hold times must be followed.
 • Use official allergen charts; confirm with manager.` },
-    { topic:"Cleaning Chemicals", keywords:["chemical","clean","safety","msds"], answer:
-      `• Wear PPE. Never mix chemicals.
-• Follow dilution/soak times on label.
-• Store securely; report spills immediately.` },
-    { topic:"Fry Station — Setup", keywords:["fry","fries","vat","setup"], answer:
-      `• Check oil level & temperature (per spec).
-• Skim oil, insert baskets, confirm timers.
-• Correct cook times & salting procedure.
-• Filter per schedule; record in log.` },
-    { topic:"Sandwich Build — Big Mac", keywords:["big mac","build","assemble","burger"], answer:
-      `• Toast 3-part bun; sauce + onions + lettuce; cheese + patty on heel; club + sauce + lettuce + pickles; top patty; crown. Wrap per spec.` },
-    { topic:"Handwashing Steps", keywords:["handwash","wash","hygiene"], answer:
-      `• Wet → Soap → Palms → Backs → Between fingers → Thumbs → Fingertips → Rinse → Dry. 20 seconds minimum.` },
-    { topic:"Drive-Thru Etiquette", keywords:["drive thru","headset","order","etiquette"], answer:
-      `• Greet within 3s, speak clearly, confirm order, repeat totals.
-• Mute headset when not serving. Always say thank you.` },
-    { topic:"Coffee Machine Cleaning", keywords:["coffee","machine","clean"], answer:
-      `• Purge steam wand, run cleaning cycle, soak parts as per spec, log completion.` },
   ];
 
-  /* ------------------------------- Quiz -------------------------------- */
+  /* ---------- Quiz ---------- */
   const QUIZ_QUESTIONS = [
     { q:"How long should proper handwashing take?", a:["At least 10s","At least 20s","Until hands feel dry"], correct:1 },
     { q:"What do you do if a guest asks about allergens?", a:["Guess from memory","Use official allergen charts","Say everything is gluten-free"], correct:1 },
@@ -91,7 +70,7 @@
   ];
   let quiz = null;
 
-  /* ------------------------------ Utils -------------------------------- */
+  /* ---------- Utils ---------- */
   function todayISO(){ return new Date().toISOString().slice(0,10); }
   function offsetDate(days){ const d = new Date(); d.setDate(d.getDate()+days); return d.toISOString().slice(0,10); }
   function toMinutes(hhmm){ const [h,m]=hhmm.split(":").map(Number); return h*60+m; }
@@ -107,8 +86,8 @@
   const clamp = (n,min,max)=>Math.max(min, Math.min(max,n));
   const escapeHTML = (s)=> s.replace(/[&<>"']/g, m=>({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;" }[m]));
 
-  /* ---------------------------- Persistence ---------------------------- */
-  const LS_KEY = "mccrew_ai_v5";
+  /* ---------- Persistence ---------- */
+  const LS_KEY = "mccrew_ai_personal_v1";
   try{
     const raw = localStorage.getItem(LS_KEY);
     if(raw){
@@ -118,7 +97,7 @@
   }catch(e){ console.warn("[McCrew]", e.message); }
   const persist = ()=>localStorage.setItem(LS_KEY, JSON.stringify({ ...store }));
 
-  /* ------------------------------ Elements ----------------------------- */
+  /* ---------- DOM ---------- */
   const chatLog = document.getElementById("chatLog");
   const chatForm = document.getElementById("chatForm");
   const chatText = document.getElementById("chatText");
@@ -139,10 +118,9 @@
 
   const fxCanvas = document.getElementById("fx");
   const toasts = document.getElementById("toasts");
-
   const on = (el, ev, fn)=> el && el.addEventListener ? el.addEventListener(ev, fn) : null;
 
-  /* -------------------------- Render Knowledge ------------------------- */
+  /* ---------- Knowledge list UI ---------- */
   if (kbList){
     KB.forEach(item=>{
       const li = document.createElement("li");
@@ -155,7 +133,7 @@
     });
   }
 
-  /* ---------------------------- Admin Modal ---------------------------- */
+  /* ---------- Admin modal ---------- */
   on(openAdminBtn,"click", ()=>{ adminModal?.showModal?.(); renderEmpTable(); initPayConfigFields(); });
   on(closeAdminBtn,"click", ()=> adminModal?.close?.());
   on(adminModal,"cancel", (e)=>{ e.preventDefault(); adminModal.close(); });
@@ -189,13 +167,13 @@
       `<tr><td>${e.id}</td><td>${escapeHTML(e.name)}</td><td>£${e.hourlyRate.toFixed(2)}/hr</td><td>${e.plannedShifts?.length||0} shifts</td></tr>`
     )).join("");
     empTable.innerHTML = `<table>
-      <thead><tr><th>ID</th><th>Name</th><th>Rate</</th><th>Shifts</th></tr></thead>
+      <thead><tr><th>ID</th><th>Name</th><th>Rate</th><th>Shifts</th></tr></thead>
       <tbody>${rows||`<tr><td colspan="4">No employees yet</td></tr>`}</tbody>
     </table>`;
   }
   function initPayConfigFields(){ if (payFreq) payFreq.value = store.payConfig.frequency; if (nextPayday) nextPayday.value = store.payConfig.nextPayday; }
 
-  /* ----------------------------- Chat Core ----------------------------- */
+  /* ---------- Chat core ---------- */
   on(chatForm,"submit", async (e)=>{
     e.preventDefault();
     const text = (chatText?.value||"").trim(); if(!text) return;
@@ -220,16 +198,16 @@
   }
   function respondHTML(html){
     const bubble = typingBubble();
-    setTimeout(()=>{ if (bubble){ bubble.innerHTML = html; chatLog.scrollTop = chatLog.scrollHeight; } }, 180);
+    setTimeout(()=>{ if (bubble){ bubble.innerHTML = html; chatLog.scrollTop = chatLog.scrollHeight; } }, 160);
   }
   function respondText(text){ respondHTML(`<p>${escapeHTML(text).replace(/\n/g,"<br>")}</p>`); }
 
-  /* ----------------------------- Router ------------------------------- */
+  /* ---------- Router ---------- */
   async function handleInput(raw){
     const text = raw.trim();
     pushUser(raw);
 
-    // Quiz active? handle A/B/C/1/2/3 answers unless it's a command
+    // Quiz answers if active
     if (quiz && quiz.active && !text.startsWith("/")){
       const pick = text.trim()[0]?.toLowerCase();
       const idx = "abc123".indexOf(pick);
@@ -237,13 +215,12 @@
         const mapped = idx % 3;
         const curr = QUIZ_QUESTIONS[quiz.idx];
         const ok = mapped === curr.correct;
-        if (ok) beep(880,120,'triangle'); else beep(220,160,'sawtooth');
         respondHTML(`<p><b>${ok? "✅ Correct":"❌ Not quite"}</b> — ${escapeHTML(curr.a[curr.correct])}</p>`);
-        quiz.idx++;
+        quiz.idx++; if (ok) quiz.score++;
         if (quiz.idx >= QUIZ_QUESTIONS.length){
-          respondHTML(`<p><b>Quiz complete!</b> Score: ${quiz.score + (ok?1:0)}/${QUIZ_QUESTIONS.length}</p>`);
+          respondHTML(`<p><b>Quiz complete!</b> Score: ${quiz.score}/${QUIZ_QUESTIONS.length}</p>`);
           quiz = null; toast("Quiz complete!","good");
-        } else { if (ok) quiz.score++; setTimeout(askQuizQuestion, 250); }
+        } else { setTimeout(askQuizQuestion, 220); }
         return;
       }
     }
@@ -264,17 +241,17 @@
     if (low.startsWith("/swap"))   return handleSwap(text);
     if (low.startsWith("/swaps"))  return listSwaps();
 
-    // Quick local intents (cheap) before calling AI
+    // Local intents (cheap)
     const local = localIntents(low);
     if (local) return respondText(local);
 
-    // If knowledge match, show it quickly
+    // Quick KB match
     const match = bestKB(low);
     if (match) return respondHTML(`<p><b>${match.topic}</b></p><p>${escapeHTML(match.answer).replace(/\n/g,"<br>")}</p>`);
 
-    // Otherwise ask the AI function
+    // AI call with persona/KB/context
     const reply = await askAI(text);
-    respondText(reply);
+    if (!maybeHandleAction(reply)) respondText(reply);
   }
 
   function showHelp(){
@@ -365,7 +342,7 @@
     if (raw.includes("start")){
       quiz = { idx:0, score:0, active:true };
       respondText("Starting 5-question training quiz. Answer with A/B/C (or 1/2/3). Type /quit to exit.");
-      setTimeout(askQuizQuestion, 220);
+      setTimeout(askQuizQuestion, 200);
       toast("Quiz started");
     } else respondText("Use: /quiz start");
   }
@@ -390,7 +367,7 @@
       const mm = Math.floor(left/60000).toString().padStart(2,"0");
       const ss = Math.floor((left%60000)/1000).toString().padStart(2,"0");
       el.innerHTML = `<b>Break timer:</b> ${mm}:${ss}`;
-      if (left<=0){ clearInterval(t); respondText("⏰ Break finished — please return to station per policy."); beep(880,200); setTimeout(()=>beep(660,180),220); setTimeout(()=>beep(880,240),440); toast("Break finished","warn"); }
+      if (left<=0){ clearInterval(t); respondText("⏰ Break finished — please return to station per policy."); }
     }, 250);
   }
 
@@ -407,19 +384,19 @@
     respondHTML(`<p><b>Latest swap requests</b></p><ul>${html}</ul>`);
   }
 
-  /* ------------------------ Local Intent Shortcuts ---------------------- */
+  /* ---------- Local intents ---------- */
   function localIntents(low){
     if (/^(hi|hello|hey|yo)\b/.test(low)) return "Hi 👋 I can help with shifts, pay, policies, and training.";
     if (/how are (you|u)/.test(low)) return "Doing great — ready to help with your shift or questions.";
     if (/thank(s| you)/.test(low)) return "You’re welcome! 🍟";
     if (/(bye|goodbye|see ya)/.test(low)) return "See you later 👋 Have a great shift!";
     if (/uniform/.test(low)) return "Uniform clean, name badge visible, black non-slip shoes, hair tied; follow your store standards.";
-    if (/\bbreak\b/.test(low)) return "Typical crew break is ~20 minutes if your shift goes over 4.5 hours (store policy may vary).";
+    if (/\bbreak\b/.test(low)) return "Typical crew break is ~20 minutes if your shift goes over 4.5–6 hours (store policy may vary).";
     if (/\bpay(day|check)?\b/.test(low)) return "You can view next payday with /nextpay or today’s estimate with /pay.";
     return null;
   }
 
-  /* ----------------------- Knowledge Search Helpers --------------------- */
+  /* ---------- KB search helpers ---------- */
   function scoreKB(entry, term){
     term = term.toLowerCase(); let score = 0;
     if (entry.topic.toLowerCase().includes(term)) score += 3;
@@ -430,7 +407,7 @@
   function rankedKB(term){ return KB.map(k=>({ ...k, _s:scoreKB(k,term)})).filter(k=>k._s>0).sort((a,b)=>b._s-a._s); }
   function bestKB(text){ return rankedKB(text)[0] || null; }
 
-  /* ----------------------------- Toasts -------------------------------- */
+  /* ---------- Toasts ---------- */
   function toast(msg, type=""){ if(!toasts) return;
     const el = document.createElement("div");
     el.className = `toast ${type}`; el.textContent = msg;
@@ -438,37 +415,16 @@
     setTimeout(()=>{ el.classList.add("leave"); setTimeout(()=>el.remove(), 200); }, 1800);
   }
 
-  /* ------------------------------ Sounds -------------------------------- */
-  function beep(freq=880, ms=160, type='sine'){
-    try{
-      const AC = window.AudioContext || window.webkitAudioContext;
-      const ctx = new AC();
-      const o = ctx.createOscillator(); const g = ctx.createGain();
-      o.type = type; o.frequency.value = freq; o.connect(g); g.connect(ctx.destination);
-      o.start(); g.gain.setValueAtTime(0.2, ctx.currentTime);
-      g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + ms/1000);
-      setTimeout(()=>{ o.stop(); ctx.close(); }, ms+60);
-    }catch{}
-  }
-
-  /* ----------------------------- Confetti --------------------------------
-     Lightweight canvas confetti; no toggle; invoked on events (e.g., pay shown)
-  ------------------------------------------------------------------------ */
+  /* ---------- Confetti (lightweight) ---------- */
   let confettiActive = false, pieces = [], rafId = 0, killAt = 0;
   const fadeMs = 350;
   const ctx2d = fxCanvas?.getContext?.('2d');
-
   function resizeFx(){ if(!fxCanvas) return; fxCanvas.width = innerWidth; fxCanvas.height = innerHeight; }
   addEventListener('resize', resizeFx); resizeFx();
-
   function clearFxCanvas(){ if (ctx2d && fxCanvas) ctx2d.clearRect(0,0,fxCanvas.width,fxCanvas.height); }
-  function stopConfetti(clear=true){
-    confettiActive = false; if (rafId) cancelAnimationFrame(rafId); rafId = 0;
-    if (clear) clearFxCanvas(); pieces.length = 0;
-  }
+  function stopConfetti(clear=true){ confettiActive = false; if (rafId) cancelAnimationFrame(rafId); rafId = 0; if (clear) clearFxCanvas(); pieces.length = 0; }
   function makePieces(n){
-    const arr = [];
-    const W = fxCanvas?.width || innerWidth, H = fxCanvas?.height || innerHeight;
+    const arr = []; const W = fxCanvas?.width || innerWidth, H = fxCanvas?.height || innerHeight;
     for (let i=0;i<n;i++){
       arr.push({ x: Math.random()*W, y: -20 - Math.random()*H*0.25, r: 4 + Math.random()*5,
         vy: 2 + Math.random()*3, vx: -1.2 + Math.random()*2.4, rot: Math.random()*Math.PI, vr: -0.25 + Math.random()*0.5,
@@ -476,11 +432,10 @@
     }
     return arr;
   }
-  function confetti(ms=1000){
+  function confetti(ms=900){
     if (!ctx2d || !fxCanvas) return;
     stopConfetti(false); pieces = makePieces(120); confettiActive = true;
     const now = performance.now(); killAt = now + ms;
-
     const tick = (ts) => {
       if (!confettiActive || !ctx2d) return;
       clearFxCanvas();
@@ -498,50 +453,87 @@
     };
     rafId = requestAnimationFrame(tick);
   }
-  document.addEventListener('visibilitychange', () => {
-    if (document.hidden){ if (rafId) cancelAnimationFrame(rafId); }
-    else if (confettiActive){ rafId = requestAnimationFrame((ts)=>confetti(Math.max(350, killAt - ts))); }
-  });
 
-  /* -------------------------- AI Function Hook -------------------------- */
- async function askAI(message){
-  try{
-    const res = await fetch("/.netlify/functions/ask", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ question: message })
-      // For one test, you can add debug: true to see raw shape: { question: message, debug: true }
-    });
-
-    const text = await res.text();
-    let data = {};
-    try { data = text ? JSON.parse(text) : {}; } catch {}
-
-    if (!res.ok) {
-      const msg = data.error || `AI endpoint error (${res.status})`;
-      console.warn("[AI]", msg, data.detail || text);
-      return `AI connection failed: ${msg}`;
-    }
-
-    if (data.error) {
-      console.warn("[AI] server reported error", data.error, data.detail);
-      return `AI issue: ${data.error}`;
-    }
-
-    return data.answer || "I couldn’t fetch a reply just now. Please ask again.";
-  }catch(e){
-    console.error("[AI]", e);
-    return "AI connection failed. Please try again later.";
+  /* ---------- PERSONALIZATION PLUMBING ---------- */
+  function buildPersona(){
+    return localStorage.getItem("mccrew_persona") || `
+You are McCrew AI, a friendly assistant for our store. Keep answers short (2–4 sentences), clear and kind.
+If unsure, say it may vary by store and suggest asking a manager.`;
   }
-}
 
+  function buildKB(){
+    try { return KB.map(item => `# ${item.topic}\n${item.answer}`).join("\n\n"); }
+    catch { return ""; }
+  }
 
-  /* ------------------------------ Bootstrap ----------------------------- */
+  function buildContext(){
+    return {
+      store: { name: "Your Store Name", city: "Your City" },
+      payConfig: store?.payConfig || null,
+      employeeId: document.getElementById("empId")?.value || null
+    };
+  }
+
+  async function askAI(message){
+    try{
+      const res = await fetch("/.netlify/functions/ask", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          question: message,
+          persona: buildPersona(),
+          kb: buildKB(),
+          context: buildContext()
+        })
+      });
+      const text = await res.text();
+      let data = {}; try { data = text ? JSON.parse(text) : {}; } catch {}
+      if (!res.ok) return `AI connection failed: ${data.error || res.status}`;
+      return data.answer || "I couldn’t fetch a reply just now. Please ask again.";
+    }catch(e){
+      console.error("[AI]", e);
+      return "AI connection failed. Please try again later.";
+    }
+  }
+
+  // If the model suggests a JSON action, run it.
+  function maybeHandleAction(answer){
+    const m = answer.match(/JSON:\s*({[\s\S]*})/i);
+    if (!m) return false;
+    try {
+      const obj = JSON.parse(m[1]);
+      if (obj.action && typeof obj.action === "string") {
+        // call back into our router
+        handleInput(obj.action);
+        return true;
+      }
+    } catch {}
+    return false;
+  }
+
+  /* ---------- Local intents ---------- */
+  function localIntents(low){
+    if (/^(hi|hello|hey|yo)\b/.test(low)) return "Hi 👋 I can help with shifts, pay, policies, and training.";
+    if (/how are (you|u)/.test(low)) return "Doing great — ready to help with your shift or questions.";
+    if (/thank(s| you)/.test(low)) return "You’re welcome! 🍟";
+    if (/(bye|goodbye|see ya)/.test(low)) return "See you later 👋 Have a great shift!";
+    return null;
+  }
+
+  /* ---------- KB scoring ---------- */
+  function scoreKB(entry, term){
+    term = term.toLowerCase(); let score = 0;
+    if (entry.topic.toLowerCase().includes(term)) score += 3;
+    if (entry.answer.toLowerCase().includes(term)) score += 1;
+    entry.keywords?.forEach(k=>{ if (k.includes(term) || term.includes(k)) score += 2; });
+    return score;
+  }
+  function rankedKB(term){ return KB.map(k=>({ ...k, _s:scoreKB(k,term)})).filter(k=>k._s>0).sort((a,b)=>b._s-a._s); }
+  function bestKB(text){ return rankedKB(text)[0] || null; }
+
+  /* ---------- Bootstrap ---------- */
   document.addEventListener("DOMContentLoaded", () => {
-    // Greet and hint
-    respondText("Ready. Use /week, /policy, /quiz, /break, /swap — or just ask in plain English.");
-
-    // Persist saved Emp ID if present
+    respondText("Ready. Ask me anything about shifts, pay, or policies — or use /help.");
     try{
       const saved = localStorage.getItem("mccrew_emp_id");
       if (saved && empIdInput) empIdInput.value = saved;

@@ -61,7 +61,6 @@ export async function handler(event) {
       "— Knowledge (use when relevant; if unsure, say it may vary and suggest asking a manager) —",
       kb || "(none)",
       "",
-      "Strictly refuse any request unrelated to McDonald’s store work, menu, or casual small talk.",
       "Specifically refuse coding/developer tasks (no code generation, debugging, or programming help)."
     ].join("\n");
 

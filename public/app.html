@@ -201,11 +201,13 @@
   </footer>
 
   <div id="toasts" class="toasts"></div>
+<!-- Auth0 SDK FIRST -->
+<script defer src="https://cdn.jsdelivr.net/npm/@auth0/auth0-spa-js@2/dist/auth0-spa-js.production.js"></script>
+<!-- Your shim SECOND -->
+<script defer src="/auth-auth0.js"></script>
+<!-- Your app LAST -->
+<script defer src="/app.js"></script>
 
-  <!-- Auth0 SDK + shim + your app logic -->
-  <script defer src="https://cdn.jsdelivr.net/npm/@auth0/auth0-spa-js@2/dist/auth0-spa-js.production.js"></script>
-  <script defer src="./auth-auth0.js"></script>
-  <script defer src="./app.js"></script>
 
   <!-- Subtle sparkles (inline, lightweight) -->
   <script>

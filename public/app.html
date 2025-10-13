@@ -2,280 +2,130 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <meta name="theme-color" content="#a51d14" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>McCrew AI — App</title>
-  <link rel="preconnect" href="https://cdn.jsdelivr.net" />
-  <style>
-    :root{
-      --mc-red:#a51d14; --mc-gold:#f3bf26; --mc-cream:#2a211e;
-      --ink:#e9eaee; --muted:#c8cad3;
-      --bg:#121316; --panel:#1a1b20; --line:#2b2e35; --chip:#21242a;
-      --text:var(--ink);
-    }
-    *{box-sizing:border-box}
-    html,body{height:100%}
-    body{
-      margin:0; color:var(--ink);
-      background:
-        radial-gradient(900px 600px at 110% -10%, #2a1210 0%, transparent 55%),
-        radial-gradient(900px 600px at -10% 110%, #2a1210 0%, transparent 55%),
-        linear-gradient(180deg,#17181c,#121316 60%,#111215);
-      font:16px/1.5 system-ui, Segoe UI, Roboto, Helvetica, Arial;
-    }
-    /* App bar */
-    .appbar{
-      position:sticky; top:0; z-index:20;
-      display:flex; align-items:center; gap:10px;
-      padding:10px 14px; border-bottom:1px solid var(--line);
-      background:linear-gradient(90deg, #8f1911, #b6241a);
-      color:#fff;
-    }
-    .brand{font-weight:900; display:flex; gap:8px; align-items:center}
-    .arch{background:var(--mc-gold); color:#000; padding:0 10px; border-radius:10px; box-shadow:0 1px 0 #caa40c inset}
-    .spacer{flex:1}
-    .ghost{background:#ffffff1a; color:#fff; border:1px solid #ffffff33; padding:8px 12px; border-radius:12px; cursor:pointer}
-    .ghost:hover{background:#ffffff2a}
-    .user-pill{display:flex; align-items:center; gap:8px; padding:4px 8px; border-radius:999px; background:#ffffff22; border:1px solid #ffffff44; margin-left:8px}
-    .user-pill img{width:28px; height:28px; border-radius:50%; display:none}
-    .user-pill #userName{font-weight:700}
-
-    /* Layout */
-    .shell{
-      max-width:1100px; margin:16px auto; padding:0 16px;
-      display:grid; grid-template-columns: 1fr 340px; gap:16px;
-    }
-    .card{background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:14px}
-    .card h3{margin:6px 0 10px}
-    .row{display:flex; flex-wrap:wrap; gap:8px}
-    .row input, .row select{
-      flex:1; min-width:0; padding:10px 12px; border-radius:12px; border:1px solid #3a3d46; background:#111218; color:var(--ink)
-    }
-
-    /* Chat */
-    .chat-card{display:flex; flex-direction:column; height:min(78vh, 900px); min-height:520px}
-    .chat-log{padding:14px; display:flex; flex-direction:column; gap:10px; overflow:auto; flex:1; min-height:220px}
-    .msg{max-width:90%; padding:12px 14px; border-radius:14px; border:1px solid #353842; color:var(--ink)}
-    .bot{background:#231a16} /* darker cream */
-    .user{background:#2a1f12; margin-left:auto; border-color:#3b2a15}
-    .msg code{background:#2b2410; color:#f6e7a8; padding:2px 6px; border-radius:6px; border:1px solid #4a3b12}
-    .chat-input{display:flex; gap:8px; padding:10px; border-top:1px solid var(--line)}
-    .chat-input input{
-      flex:1; padding:12px; border-radius:12px; border:1px solid #3a3d46; background:#111218; color:var(--ink)
-    }
-    .send{
-      padding:12px 16px; border-radius:12px; border:0; color:#121316; font-weight:900; cursor:pointer;
-      background:linear-gradient(90deg,#f3bf26,#ffc72c,#a51d14); background-size:200% 100%;
-    }
-
-    /* Knowledge list */
-    .kb-list{list-style:none; margin:0; padding:0; display:grid; gap:8px}
-    .kb-list li{border:1px solid #353842; background:#15171c; padding:10px 12px; border-radius:12px; cursor:pointer}
-    .kb-list li:hover{border-color:#5a4822; background:#191b21}
-
-    /* Dialog */
-    dialog::backdrop{background:rgba(0,0,0,.4)}
-    .admin{min-width:720px; max-width:92vw; background:#16171a; border:1px solid #353842; border-radius:14px; padding:0; color:var(--ink)}
-    .admin header{display:flex; justify-content:space-between; align-items:center; padding:12px 16px; border-bottom:1px solid #353842; background:#211418}
-    .admin section{padding:12px 16px; border-top:1px dashed #3a2a2c}
-    .admin .row input,.admin .row select{background:#111218; border-color:#3a3d46; color:var(--ink)}
-    .admin .row button{padding:10px 14px; border-radius:10px; border:1px solid #5a4822; background:#2b2410; color:#f0e5b3; cursor:pointer}
-    #empTable{margin-top:10px; border:1px solid #353842; border-radius:10px; overflow:hidden; background:#15171c}
-    #empTable th,#empTable td{border-bottom:1px solid #2b2e35; padding:8px 10px; text-align:left; color:#e3e5ea}
-    #empTable tr:last-child td{border-bottom:0}
-
-    /* FX canvases (sparkles layer + optional confetti layer if you use it) */
-    .fx{position:fixed; inset:0; width:100vw; height:100vh; pointer-events:none}
-    #sparkle.fx{z-index:4; opacity:.55; filter:saturate(1.05)}
-    #fx.fx{z-index:5}
-
-    /* Toasts / Footer */
-    .toasts{position:fixed; right:16px; bottom:16px; display:grid; gap:8px; z-index:50}
-    .toast{padding:10px 12px; border-radius:12px; background:#191a1e; border:1px solid #2b2e35; color:#e9eaee}
-    .toast.good{border-color:#2a6f3c; background:#142017}
-    .toast.warn{border-color:#6a4a12; background:#241e12}
-    .foot{max-width:1100px; margin:16px auto; padding:0 16px; color:#aeb1bb}
-
-    /* Mobile */
-    @media (max-width: 960px){
-      .shell{grid-template-columns: 1fr; gap:12px}
-      .chat-card{height: calc(100vh - 180px);}
-      .user-pill{display:flex} /* keep visible on mobile */
-    }
-    @media (prefers-reduced-motion: reduce){
-      *{animation:none!important; transition:none!important}
-    }
-  </style>
+  <link rel="stylesheet" href="./styles.css" />
 </head>
-<body>
-  <!-- Ambient sparkles (subtle, always on) -->
-  <canvas id="sparkle" class="fx"></canvas>
-  <!-- Optional confetti canvas if your app.js triggers confetti(...) -->
-  <canvas id="fx" class="fx"></canvas>
+<body class="theme-dark">
+  <!-- FX canvas (confetti) -->
+  <canvas id="fx" class="fx" aria-hidden="true"></canvas>
 
-  <!-- Top App Bar -->
-  <header class="appbar">
+  <!-- Toasters -->
+  <div id="toasts" class="toasts" aria-live="polite"></div>
+
+  <!-- Header -->
+  <header class="topbar">
     <div class="brand">
-      <span class="arch">M</span><span>cCrew AI</span>
+      <span class="arch">M</span>
+      <span class="brand-text">cCrew AI</span>
     </div>
-    <div class="spacer"></div>
-    <button id="openAdmin" class="ghost" type="button">Admin</button>
-    <button id="logout" class="ghost" type="button" style="display:none">Logout</button>
-    <div id="userInfo" class="user-pill">
-      <img id="userPic" alt="" />
-      <span id="userName">Crew</span>
+
+    <nav class="topnav" aria-label="Main">
+      <button id="openAdmin" class="btn ghost">Admin</button>
+      <button id="logout" class="btn ghost" style="display:none">Logout</button>
+    </nav>
+
+    <div class="profile">
+      <img id="userPic" class="avatar" alt="" referrerpolicy="no-referrer" style="display:none" />
+      <span id="userName" class="greeting">Hello 👋</span>
     </div>
   </header>
 
-  <!-- Main -->
-  <main class="shell">
-    <section class="main-col">
-      <div class="card chat-card">
-        <div id="chatLog" class="chat-log">
-          <div class="bot msg">
-            <p>Welcome to <b>McCrew AI</b>. Ask me about rules, training, shifts & pay.</p>
-            <p>Commands: <code>/help</code>, <code>/shift</code>, <code>/week</code>, <code>/pay</code>, <code>/nextpay</code>, <code>/policy &lt;term&gt;</code>, <code>/quiz start</code>, <code>/break 20</code>, <code>/swap &lt;date time-range note&gt;</code>, <code>/swaps</code>.</p>
-          </div>
-        </div>
-        <form id="chatForm" class="chat-input">
-          <input id="chatText" placeholder="Type /help or ask a rule…" autocomplete="off" />
-          <button type="submit" class="send">Send</button>
-        </form>
-      </div>
-    </section>
+  <!-- Main layout -->
+  <main class="layout">
+    <!-- Sidebar -->
+    <aside class="panel sidebar" aria-label="Sidebar">
+      <section class="card">
+        <h2 class="card-title">Your Details</h2>
+        <label class="field">
+          <span class="label">Employee ID</span>
+          <input id="empId" class="input" placeholder="e.g. 1234" inputmode="numeric" />
+        </label>
+        <p class="hint">Used for shift & pay lookups (demo data).</p>
+      </section>
 
-    <aside class="side-col">
-      <div class="card">
-        <h3>Your Employee ID</h3>
-        <div class="row">
-          <input id="empId" placeholder="e.g. 1234" />
-        </div>
-        <small>Used for shift & pay lookups (demo data).</small>
-      </div>
-
-      <div class="card">
-        <h3>Knowledge</h3>
+      <section class="card">
+        <h2 class="card-title">Knowledge Topics</h2>
         <ul id="kbList" class="kb-list"></ul>
-      </div>
+      </section>
+
+      <section class="card">
+        <h2 class="card-title">Tips</h2>
+        <ul class="tips">
+          <li>Try <code>/shift</code>, <code>/week</code>, <code>/pay</code>, <code>/nextpay</code></li>
+          <li>Search policies: <code>/policy uniform</code></li>
+          <li>Training: <code>/quiz start</code></li>
+          <li>Break timer: <code>/break 20</code></li>
+          <li>Swap a shift: <code>/swap YYYY-MM-DD HH:MM-HH:MM note…</code></li>
+        </ul>
+      </section>
     </aside>
+
+    <!-- Chat -->
+    <section class="chat card" aria-label="Chat">
+      <div id="chatLog" class="chat-log">
+        <div class="bot msg">
+          <p>Welcome to <b>McCrew AI</b>. Ask me about rules, training, shifts & pay.</p>
+          <p>Commands: <code>/help</code>, <code>/shift</code>, <code>/week</code>, <code>/pay</code>, <code>/nextpay</code>, <code>/policy &lt;term&gt;</code>, <code>/quiz start</code>, <code>/break 20</code>, <code>/swap …</code>, <code>/swaps</code>.</p>
+        </div>
+      </div>
+
+      <form id="chatForm" class="chat-input" autocomplete="off">
+        <input id="chatText" class="input input-chat" placeholder="Type /help or ask a rule…" />
+        <button type="submit" class="btn send">Send</button>
+      </form>
+    </section>
   </main>
-
-  <!-- Admin Modal -->
-  <dialog id="adminModal">
-    <form method="dialog" class="admin">
-      <header>
-        <h3>Admin • Demo Data</h3>
-        <button id="closeAdmin" type="button" class="ghost">Close</button>
-      </header>
-
-      <section>
-        <h4>Employees</h4>
-        <div class="row">
-          <input id="aEmpId" placeholder="ID e.g. 1234" />
-          <input id="aName" placeholder="Name e.g. Alex" />
-          <input id="aRate" type="number" step="0.01" placeholder="Hourly £ e.g. 11.50" />
-          <button id="addEmp" type="button">Add/Update</button>
-        </div>
-        <div id="empTable"></div>
-      </section>
-
-      <section>
-        <h4>Pay Period</h4>
-        <div class="row">
-          <label>Frequency</label>
-          <select id="payFreq">
-            <option value="weekly">Weekly</option>
-            <option value="biweekly">Bi-weekly</option>
-            <option value="monthly">Monthly</option>
-          </select>
-          <label>Next payday</label>
-          <input id="nextPayday" type="date" />
-          <button id="savePayConfig" type="button">Save</button>
-        </div>
-      </section>
-    </form>
-  </dialog>
 
   <footer class="foot">
     <small>Demo only. Replace mock data & KB with your store/company sources.</small>
   </footer>
 
-  <div id="toasts" class="toasts"></div>
-<!-- Auth0 SDK FIRST -->
-<script defer src="https://cdn.jsdelivr.net/npm/@auth0/auth0-spa-js@2/dist/auth0-spa-js.production.js"></script>
-<!-- Your shim SECOND -->
-<script defer src="/auth-auth0.js"></script>
-<!-- Your app LAST -->
-<script defer src="/app.js"></script>
+  <!-- Admin Panel (dialog) -->
+  <dialog id="adminModal" class="modal">
+    <form method="dialog" class="admin">
+      <header class="admin-head">
+        <h3>Admin • Demo Data</h3>
+        <button id="closeAdmin" type="button" class="btn ghost">Close</button>
+      </header>
 
+      <section class="admin-sec">
+        <h4>Employees</h4>
+        <div class="row">
+          <input id="aEmpId" class="input" placeholder="ID e.g. 1234" />
+          <input id="aName" class="input" placeholder="Name e.g. Alex" />
+          <input id="aRate" class="input" type="number" step="0.01" placeholder="Hourly £ e.g. 11.50" />
+          <button id="addEmp" type="button" class="btn subtle">Add/Update</button>
+        </div>
+        <div id="empTable" class="table-wrap"></div>
+      </section>
 
-  <!-- Subtle sparkles (inline, lightweight) -->
-  <script>
-  document.addEventListener("DOMContentLoaded", () => {
-    const canvas = document.getElementById("sparkle"); if(!canvas) return;
-    const ctx = canvas.getContext("2d", { alpha:true });
-    let w=0,h=0,dpr=Math.min(2, window.devicePixelRatio||1);
-    const resize=()=>{ w=canvas.clientWidth=innerWidth; h=canvas.clientHeight=innerHeight; canvas.width=Math.floor(w*dpr); canvas.height=Math.floor(h*dpr); ctx.setTransform(dpr,0,0,dpr,0,0); };
-    resize(); addEventListener("resize", resize);
-    const N=Math.round(36+Math.random()*12), golds=["#FFC72C","#FFD964","#FFE89B"], reds=["#DA291C","#E74A40"], colors=[...golds,...golds,...reds];
-    const spawn=i=>({ x:Math.random()*w, y:(Math.random()**1.6)*(h*0.55), r:0.8+Math.random()*1.8, a:0.18+Math.random()*0.25, c:colors[(Math.random()*colors.length)|0], vy:0.12+Math.random()*0.35, life:4e3+Math.random()*5e3, born:performance.now()-Math.random()*5e3, seed:i });
-    const pts=Array.from({length:N},(_,i)=>spawn(i));
-    const ease=t=>0.5-0.5*Math.cos(Math.PI*t);
-    const mql=matchMedia("(prefers-reduced-motion: reduce)"); if(mql.matches) return;
-    const tick=ts=>{
-      ctx.clearRect(0,0,w,h);
-      for(let i=0;i<pts.length;i++){ const p=pts[i], t=(ts-p.born)/p.life;
-        if(t>=1){ pts[i]=spawn(i); continue; }
-        const x=p.x+Math.sin((t+p.seed)*6.283)*4, y=p.y+p.vy*(t*120), alpha=p.a*(t<.5?ease(t*2):ease((1-t)*2));
-        ctx.globalAlpha=alpha*.55; ctx.beginPath(); ctx.arc(x,y,p.r*3.2,0,Math.PI*2); ctx.fillStyle=p.c; ctx.fill();
-        ctx.globalAlpha=alpha; ctx.beginPath(); ctx.arc(x,y,p.r,0,Math.PI*2); ctx.fillStyle=p.c; ctx.fill();
-      }
-      ctx.globalAlpha=1; requestAnimationFrame(tick);
-    };
-    requestAnimationFrame(tick);
-  });
-  </script>
+      <section class="admin-sec">
+        <h4>Pay Period</h4>
+        <div class="row">
+          <label class="field-inline">
+            <span class="label">Frequency</span>
+            <select id="payFreq" class="input">
+              <option value="weekly">Weekly</option>
+              <option value="biweekly">Bi-weekly</option>
+              <option value="monthly">Monthly</option>
+            </select>
+          </label>
 
-  <!-- Greeting/photo: render immediately from cache, then refresh when NF/Auth ready -->
-  <script>
-  (function(){
-    const nameEl = document.getElementById("userName");
-    const picEl  = document.getElementById("userPic");
-    const LS_LAST_USER = "mccrew:last_user";
+          <label class="field-inline">
+            <span class="label">Next payday</span>
+            <input id="nextPayday" class="input" type="date" />
+          </label>
 
-    function render(basic){
-      if (!basic) return;
-      const first = (basic.name || basic.email || "Crew").split(" ")[0];
-      if (nameEl) nameEl.textContent = `Hello, ${first} 👋`;
-      if (picEl && basic.picture){ picEl.src = basic.picture; picEl.style.display = "block"; }
-    }
+          <button id="savePayConfig" type="button" class="btn subtle">Save</button>
+        </div>
+      </section>
+    </form>
+  </dialog>
 
-    // 1) Paint from cache instantly
-    try { const cached = localStorage.getItem(LS_LAST_USER); if (cached) render(JSON.parse(cached)); } catch {}
-
-    // 2) Pull live user when ready
-    async function refreshFromLive(){
-      try {
-        if (!window.NF || !NF.getUserSafe) return;
-        const u = await NF.getUserSafe();
-        if (!u) return;
-        render({ email: u.email, name: u.name, picture: u.picture });
-      } catch {}
-    }
-
-    // 3) Retry briefly in case SDK warms up
-    async function retry(times=6, delay=200){
-      for (let i=0;i<times;i++){ await refreshFromLive(); await new Promise(r=>setTimeout(r, delay)); }
-    }
-    const run = ()=>{ refreshFromLive(); retry(); };
-
-    window.addEventListener("nf-ready", run);
-    window.addEventListener("auth:ready", run);
-    window.addEventListener("auth:change", run);
-    window.addEventListener("pageshow", (e)=>{ if (e.persisted) run(); });
-    document.addEventListener("visibilitychange", ()=>{ if (!document.hidden) run(); });
-    document.addEventListener("DOMContentLoaded", run);
-  })();
-  </script>
+  <!-- Scripts: Auth0 SDK → NF shim → App -->
+  <script defer src="https://cdn.jsdelivr.net/npm/@auth0/auth0-spa-js@2/dist/auth0-spa-js.production.js"></script>
+  <script defer src="./auth-auth0.js"></script>
+  <script defer src="./app.js"></script>
 </body>
 </html>

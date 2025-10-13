@@ -1,6 +1,6 @@
 [build]
-  publish = "public"        # <- where index.html/app.html live
-  functions = "functions"   # <- where ask.js lives
+  publish = "public"        # this is where your index.html and app.html live
+  functions = "functions"   # this is where ask.js is stored
 
 [functions]
-  node_bundler = "esbuild"
+  node_bundler = "esbuild"  # makes sure your JS functions run properly on Netlify

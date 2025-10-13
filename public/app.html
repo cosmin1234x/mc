@@ -22,6 +22,7 @@
 
     <nav class="topnav" aria-label="Main">
       <button id="openAdmin" class="btn ghost">Admin</button>
+      <button id="openAISettings" class="btn ghost">AI Settings</button>
       <button id="logout" class="btn ghost" style="display:none">Logout</button>
     </nav>
 
@@ -53,10 +54,10 @@
         <h2 class="card-title">Tips</h2>
         <ul class="tips">
           <li>Try <code>/shift</code>, <code>/week</code>, <code>/pay</code>, <code>/nextpay</code></li>
-          <li>Search policies: <code>/policy uniform</code></li>
+          <li>Policies: <code>/policy uniform</code></li>
           <li>Training: <code>/quiz start</code></li>
           <li>Break timer: <code>/break 20</code></li>
-          <li>Swap a shift: <code>/swap YYYY-MM-DD HH:MM-HH:MM note…</code></li>
+          <li>Swap: <code>/swap YYYY-MM-DD HH:MM-HH:MM note…</code></li>
         </ul>
       </section>
     </aside>
@@ -65,7 +66,7 @@
     <section class="chat card" aria-label="Chat">
       <div id="chatLog" class="chat-log">
         <div class="bot msg">
-          <p>Welcome to <b>McCrew AI</b>. Ask me about rules, training, shifts & pay.</p>
+          <p>Welcome to <b>McCrew AI</b>. Ask about rules, training, shifts & pay — or the menu.</p>
           <p>Commands: <code>/help</code>, <code>/shift</code>, <code>/week</code>, <code>/pay</code>, <code>/nextpay</code>, <code>/policy &lt;term&gt;</code>, <code>/quiz start</code>, <code>/break 20</code>, <code>/swap …</code>, <code>/swaps</code>.</p>
         </div>
       </div>
@@ -118,6 +119,48 @@
           </label>
 
           <button id="savePayConfig" type="button" class="btn subtle">Save</button>
+        </div>
+      </section>
+    </form>
+  </dialog>
+
+  <!-- AI Settings Modal -->
+  <dialog id="aiSettingsModal" class="modal">
+    <form method="dialog" class="admin">
+      <header class="admin-head">
+        <h3>AI Settings</h3>
+        <button id="closeAISettings" type="button" class="btn ghost">Close</button>
+      </header>
+
+      <section class="admin-sec">
+        <h4>Persona (tone & behaviour)</h4>
+        <p class="hint">Keep it short (2–4 sentences). Include boundaries (e.g., “no coding help”).</p>
+        <textarea id="personaText" class="input" rows="5" placeholder="Persona…"></textarea>
+      </section>
+
+      <section class="admin-sec">
+        <h4>Knowledge (policies, menu blurbs)</h4>
+        <p class="hint">Use concise bullets. Example: Uniform, Breaks, Allergens, Big Mac blurb, etc.</p>
+        <textarea id="kbText" class="input" rows="10" placeholder="Knowledge base…"></textarea>
+      </section>
+
+      <section class="admin-sec">
+        <h4>Try it</h4>
+        <div class="row" style="align-items:flex-start">
+          <input id="testPrompt" class="input" placeholder="Type a test question (e.g., What’s a Big Mac?)" />
+          <button id="runTest" type="button" class="btn subtle">Ask test</button>
+        </div>
+        <div id="testResult" class="card" style="margin-top:10px; padding:10px; background:#131a2a; border:1px solid var(--line); border-radius:10px; min-height:44px"></div>
+      </section>
+
+      <section class="admin-sec">
+        <div class="row">
+          <button id="saveAISettings" type="button" class="btn send">Save</button>
+          <button id="resetAISettings" type="button" class="btn subtle">Reset to defaults</button>
+          <span style="flex:1"></span>
+          <button id="exportAISettings" type="button" class="btn ghost">Export</button>
+          <button id="importAISettings" type="button" class="btn ghost">Import</button>
+          <input id="importFile" type="file" accept="application/json" style="display:none" />
         </div>
       </section>
     </form>

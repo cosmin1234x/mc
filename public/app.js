@@ -1,31 +1,49 @@
-/* McCrew AI — app.js (dark UI compatible)
-   - Auth0 greeting + avatar via NF shim
+/* McCrew AI — app.js (dark UI)
+   - Auth0 greeting + avatar (no refresh needed)
    - Personalizable AI (persona + KB + context)
-   - JSON action handling
-   - Topic guard: only McDonald's ops + casual chat (refuse coding/off-topic)
+   - Topic guard: only McDonald's ops + menu + small talk (refuse coding/off-topic)
    - Admin demo data (employees, pay config, swaps)
+   - AI Settings modal (edit/test/export/import)
+   - Subtle confetti (no toggle)
 */
 
 (() => {
-  /* ---------- Auth guard + header greeting ---------- */
-  document.addEventListener("DOMContentLoaded", async () => {
+  /* ---------- Auth greeting (no refresh needed) ---------- */
+  async function setupHeaderFromAuth() {
     try{
-      if (!window.NF || !NF.requireAuth) return console.warn("[McCrew] NF not ready (auth shim missing?)");
-      const user = await NF.requireAuth("/"); // redirect to login if not logged in
-      if (user) {
-        const who = document.getElementById("userName");
-        const first = (user.raw?.name || user.email || "Crew").split(" ")[0];
-        if (who) who.textContent = `Hello, ${first} 👋`;
+      if (!window.NF || !NF.getUserSafe) return;
+      const user = await NF.getUserSafe();
+      if (!user) return;
+      const who = document.getElementById("userName");
+      const first = (user.raw?.name || user.email || "Crew").split(" ")[0];
+      if (who) who.textContent = `Hello, ${first} 👋`;
 
-        const pic = document.getElementById("userPic");
-        const avatar = user.raw?.picture || user.raw?.avatar || "";
-        if (pic && avatar) { pic.src = avatar; pic.style.display = "block"; }
+      const pic = document.getElementById("userPic");
+      const avatar = user.raw?.picture || user.raw?.avatar || "";
+      if (pic && avatar) { pic.src = avatar; pic.style.display = "block"; }
 
-        const logoutBtn = document.getElementById("logout");
-        if (logoutBtn) { logoutBtn.style.display = "inline-block"; logoutBtn.onclick = (e)=>{ e.preventDefault(); NF.signOut("/"); }; }
-      }
+      const logoutBtn = document.getElementById("logout");
+      if (logoutBtn) { logoutBtn.style.display = "inline-block"; logoutBtn.onclick = (e)=>{ e.preventDefault(); NF.signOut("/"); }; }
     }catch(e){ console.warn("[Auth]", e); }
+  }
+
+  document.addEventListener("DOMContentLoaded", async () => {
+    // If NF not ready yet, we’ll run again on nf-ready
+    setupHeaderFromAuth();
+    respondText("Ready. Ask me about shifts, pay, policies, or menu — or use /help.");
+
+    // Restore saved Emp ID
+    try{
+      const saved = localStorage.getItem("mccrew_emp_id");
+      const empIdInput = document.getElementById("empId");
+      if (saved && empIdInput) empIdInput.value = saved;
+      empIdInput?.addEventListener("change", ()=>{
+        try{ localStorage.setItem("mccrew_emp_id", empIdInput.value.trim()); }catch{}
+      });
+    }catch{}
   });
+  // When NF shim finishes, update header (fixes mobile timing)
+  window.addEventListener("nf-ready", setupHeaderFromAuth);
 
   /* ---------- Demo Data ---------- */
   const store = {
@@ -43,7 +61,7 @@
     swaps: []
   };
 
-  /* ---------- Knowledge Base (used for UI + AI KB) ---------- */
+  /* ---------- Knowledge Base (UI + AI KB seed) ---------- */
   const KB = [
     { topic:"Uniform Policy", keywords:["uniform","dress","appearance"], answer:
       `• Clean full uniform, name badge visible.
@@ -92,6 +110,7 @@
   }
   const clamp = (n,min,max)=>Math.max(min, Math.min(max,n));
   const escapeHTML = (s)=> s.replace(/[&<>"']/g, m=>({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;" }[m]));
+  const addEvt = (el, ev, fn)=> el && el.addEventListener ? el.addEventListener(ev, fn) : null;
   const toast = (msg, type="")=>{
     const box = document.getElementById("toasts"); if(!box) return;
     const el = document.createElement("div");
@@ -131,7 +150,6 @@
   const savePayConfig = document.getElementById("savePayConfig");
 
   const fxCanvas = document.getElementById("fx");
-  const toasts = document.getElementById("toasts");
 
   /* ---------- KB list (click inserts answer) ---------- */
   if (kbList){
@@ -220,7 +238,7 @@
     pushUser(raw);
     const low = text.toLowerCase();
 
-    // Quiz answers if active (and not a command)
+    // Quiz answers (if active and not a command)
     if (quiz && quiz.active && !low.startsWith("/")){
       const pick = text.trim()[0]?.toLowerCase();
       const idx = "abc123".indexOf(pick);
@@ -252,20 +270,20 @@
     if (low.startsWith("/swap"))   return handleSwap(text);
     if (low.startsWith("/swaps"))  return listSwaps();
 
-    // ---------- Local topic guard (instant, saves tokens) ----------
-    const coding = /\b(html|css|javascript|js|typescript|python|react|node|express|sql|database|api|debug|compile|code|snippet|write.*code|build.*website|script)\b/i;
+    // ---------- Local topic guard (instant) ----------
+    const coding = /\b(html|css|javascript|js|typescript|python|react|node|express|sql|database|db|api|debug|compile|code|snippet|write.*code|build.*website|script|program)\b/i;
     const casual = /\b(hi|hello|hey|yo|how are (you|u)|thanks|thank you|bye|goodbye|see ya|what'?s up|sup)\b/i;
-    const mcd = /(mcdonald|mccrew|crew|store|shift|rota|schedule|week|pay|payday|paycheck|overtime|break|uniform|policy|rules|allergen|food safety|handwash|fryer|drive-?thru|manager|training|quiz|swap|swaps|clock|timeclock|hold time|burger|fries|station)/i;
+    const mcd = /(mcdonald|mccrew|crew|store|shift|rota|schedule|week|pay|payday|paycheck|overtime|break|uniform|policy|rules|allergen|allergens|food safety|handwash|fryer|drive-?thru|manager|training|quiz|swap|swaps|clock|timeclock|hold time|station|menu|item|ingredients?|nutrition|calorie|calories|price|sauce|bun|patty|cheese|pickle|ketchup|mustard|lettuce|onion|sesame|burger|fries|nuggets?|mcflurry|big\s*mac|mcchicken|filet[-\s]?o[-\s]?fish|double\s*cheeseburger|quarter\s*pounder)/i;
 
     if (coding.test(low)) {
-      return respondText("I can’t help with coding or developer tasks here. I focus on McDonald’s shifts, pay, training, and store policies.");
+      return respondText("I can’t help with coding or developer tasks here. I focus on McDonald’s shifts, pay, training, store policies, and menu questions.");
     }
     if (!casual.test(low) && !mcd.test(low)) {
-      return respondText("I’m here for McDonald’s crew topics: shifts, rota, pay, breaks, policies, training, food safety, and daily store questions. Try one of those. 😊");
+      return respondText("I’m here for McDonald’s crew topics: shifts, rota, pay, breaks, policies, training, food safety, and menu questions. Try one of those. 😊");
     }
-    // ---------- End local topic guard ----------
+    // ---------- End topic guard ----------
 
-    // Quick KB hit
+    // Quick KB match
     const match = bestKB(low);
     if (match) return respondHTML(`<p><b>${match.topic}</b></p><p>${escapeHTML(match.answer).replace(/\n/g,"<br>")}</p>`);
 
@@ -281,7 +299,7 @@
       <li><code>/pay</code>, <code>/nextpay</code></li>
       <li><code>/policy &lt;term&gt;</code>, <code>/quiz start</code>, <code>/quit</code></li>
       <li><code>/break 20</code>, <code>/cancelbreak</code></li>
-      <li>Or just ask in plain English 🙂</li>
+      <li>Menu questions (e.g., “What’s a Big Mac?”)</li>
     </ul>`);
   }
 
@@ -404,15 +422,33 @@
   }
 
   /* ---------- AI personalization plumbing ---------- */
+  const DEFAULT_PERSONA_UI = `You are McCrew AI for our store. Be friendly, concise, and practical.
+Use UK spelling. If unsure, say it may vary by store and suggest asking a manager.
+Keep answers to 2–3 sentences. Refuse coding/developer tasks.`;
+
+  const DEFAULT_KB_UI = `Uniform
+- Clean uniform, name badge, black non-slip shoes; hair tied; nets when needed.
+
+Breaks
+- ~20 minutes if shift >4.5–6 hours (timing per manager/rush).
+
+Allergens
+- Use official allergen chart; never guess; confirm with manager.
+
+Big Mac
+- Two beef patties, three-part sesame bun, Big Mac sauce, lettuce, cheese, pickles, onions.
+(Ingredients/nutrition can vary by market.)`;
+
   function buildPersona(){
-    return localStorage.getItem("mccrew_persona") || `
-You are McCrew AI, a friendly assistant for our store. Keep answers short (2–4 sentences), clear and kind.
-If unsure, say it may vary by store and suggest asking a manager.
-Refuse coding/developer tasks and off-topic requests.`;
+    return localStorage.getItem("mccrew_persona") || DEFAULT_PERSONA_UI;
   }
   function buildKB(){
-    try { return KB.map(item => `# ${item.topic}\n${item.answer}`).join("\n\n"); }
-    catch { return ""; }
+    // Prefer admin-edited KB; else seed from UI defaults + inline KB array
+    const edited = localStorage.getItem("mccrew_kb");
+    if (edited) return edited;
+    const seeded = DEFAULT_KB_UI;
+    const inline = KB.map(item => `# ${item.topic}\n${item.answer}`).join("\n\n");
+    return `${seeded}\n\n${inline}`;
   }
   function buildContext(){
     return {
@@ -508,18 +544,104 @@ Refuse coding/developer tasks and off-topic requests.`;
     rafId = requestAnimationFrame(tick);
   }
 
-  /* ---------- Bootstrap ---------- */
-  document.addEventListener("DOMContentLoaded", () => {
-    respondText("Ready. Ask me about shifts, pay, or policies — or use /help.");
+  /* ---------- AI Settings wiring ---------- */
+  const openAISettingsBtn  = document.getElementById("openAISettings");
+  const aiSettingsModal    = document.getElementById("aiSettingsModal");
+  const closeAISettingsBtn = document.getElementById("closeAISettings");
+  const personaText        = document.getElementById("personaText");
+  const kbText             = document.getElementById("kbText");
+  const saveAISettingsBtn  = document.getElementById("saveAISettings");
+  const resetAISettingsBtn = document.getElementById("resetAISettings");
+  const exportBtn          = document.getElementById("exportAISettings");
+  const importBtn          = document.getElementById("importAISettings");
+  const importFileInput    = document.getElementById("importFile");
+  const testPromptInput    = document.getElementById("testPrompt");
+  const runTestBtn         = document.getElementById("runTest");
+  const testResultBox      = document.getElementById("testResult");
+
+  addEvt(openAISettingsBtn, "click", ()=>{
+    if (!aiSettingsModal?.showModal) return;
+    personaText.value = localStorage.getItem("mccrew_persona") || DEFAULT_PERSONA_UI;
+    kbText.value      = localStorage.getItem("mccrew_kb") || DEFAULT_KB_UI;
+    testPromptInput.value = "";
+    testResultBox.textContent = "";
+    aiSettingsModal.showModal();
+  });
+  addEvt(closeAISettingsBtn, "click", ()=> aiSettingsModal?.close());
+  addEvt(aiSettingsModal, "cancel", (e)=>{ e.preventDefault(); aiSettingsModal.close(); });
+
+  addEvt(saveAISettingsBtn, "click", ()=>{
     try{
-      const saved = localStorage.getItem("mccrew_emp_id");
-      if (saved && empIdInput) empIdInput.value = saved;
-      empIdInput?.addEventListener("change", ()=>{
-        try{ localStorage.setItem("mccrew_emp_id", empIdInput.value.trim()); }catch{}
-      });
-    }catch{}
+      localStorage.setItem("mccrew_persona", (personaText.value||"").trim());
+      localStorage.setItem("mccrew_kb", (kbText.value||"").trim());
+      toast("AI settings saved","good");
+      aiSettingsModal.close();
+    }catch(e){ toast("Could not save settings","warn"); }
+  });
+  addEvt(resetAISettingsBtn, "click", ()=>{
+    try{
+      localStorage.removeItem("mccrew_persona");
+      localStorage.removeItem("mccrew_kb");
+      personaText.value = DEFAULT_PERSONA_UI;
+      kbText.value = DEFAULT_KB_UI;
+      toast("Reverted to defaults","good");
+    }catch(e){ toast("Reset failed","warn"); }
   });
 
-  /* ---------- Helpers ---------- */
-  function addEvt(el, ev, fn){ if (el && el.addEventListener) el.addEventListener(ev, fn); }
+  addEvt(exportBtn, "click", ()=>{
+    const data = {
+      persona: localStorage.getItem("mccrew_persona") || DEFAULT_PERSONA_UI,
+      kb: localStorage.getItem("mccrew_kb") || DEFAULT_KB_UI,
+      savedAt: new Date().toISOString()
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], {type:"application/json"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = "mccrew-ai-settings.json";
+    document.body.appendChild(a); a.click();
+    setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 200);
+  });
+
+  addEvt(importBtn, "click", ()=> importFileInput?.click());
+  addEvt(importFileInput, "change", ()=>{
+    const file = importFileInput.files?.[0]; if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e)=>{
+      try{
+        const obj = JSON.parse(String(e.target?.result || "{}"));
+        if (typeof obj.persona === "string") personaText.value = obj.persona;
+        if (typeof obj.kb === "string") kbText.value = obj.kb;
+        toast("Loaded file — click Save to apply","good");
+      }catch{ toast("Invalid file","warn"); }
+    };
+    reader.readAsText(file);
+  });
+
+  addEvt(runTestBtn, "click", async ()=>{
+    const q = (testPromptInput.value||"").trim();
+    if (!q) return toast("Enter a test question","warn");
+
+    const personaPreview = (personaText.value||DEFAULT_PERSONA_UI).trim();
+    const kbPreview = (kbText.value||DEFAULT_KB_UI).trim();
+
+    try{
+      testResultBox.textContent = "Thinking…";
+      const res = await fetch("/.netlify/functions/ask", {
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({
+          question: q,
+          persona: personaPreview,
+          kb: kbPreview,
+          context: buildContext()
+        })
+      });
+      const text = await res.text();
+      const data = text ? JSON.parse(text) : {};
+      testResultBox.textContent = data.answer || "No response.";
+    }catch(e){
+      testResultBox.textContent = "Test failed. Check console/network.";
+      console.error("[AI test]", e);
+    }
+  });
 })();

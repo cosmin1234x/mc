@@ -2,93 +2,89 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <meta name="theme-color" content="#a51d14" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Sign in • McCrew AI</title>
-  <link rel="preconnect" href="https://cdn.jsdelivr.net" />
+  <link rel="stylesheet" href="./styles.css" />
   <style>
-    :root{
-      --mc-red:#a51d14; --mc-gold:#f3bf26; --ink:#e9eaee; --muted:#c8cad3;
-      --bg:#16171a; --panel:#1c1e22; --line:#2a2d33;
-    }
-    *{box-sizing:border-box}
-    html,body{height:100%}
-    body{
-      margin:0; color:var(--ink); background:
-        radial-gradient(900px 600px at 110% -10%, #2a1210 0%, transparent 55%),
-        radial-gradient(900px 600px at -10% 110%, #2a1210 0%, transparent 55%),
-        linear-gradient(180deg,#1b1c20,#16171a 50%,#141518);
-      font:16px/1.5 system-ui, Segoe UI, Roboto, Helvetica, Arial;
-    }
-    .wrap{min-height:100vh; display:grid; place-items:center; padding:32px}
-    .card{
-      width:min(880px,95vw); border:1px solid var(--line); background:var(--panel); border-radius:18px;
-      overflow:hidden; display:grid; grid-template-columns: 1.15fr 1fr;
-    }
-    .hero{
-      position:relative; padding:28px; background:
-        linear-gradient(180deg,#201011, #1b0c0d 60%, #1a0b0c);
-      color:#fff; display:flex; flex-direction:column; gap:14px; justify-content:center;
-    }
-    .hero .brand{display:flex; align-items:center; gap:10px; font-weight:900; font-size:22px}
-    .hero .arch{background:var(--mc-gold); color:#000; padding:0 12px; border-radius:10px; box-shadow:0 1px 0 #cfab10 inset}
-    .hero h1{margin:6px 0 0; font-size:28px}
-    .hero p{margin:0; color:#f0d7d5}
-    .hero .pill{display:inline-flex; gap:8px; align-items:center; border:1px solid #ffffff33; background:#ffffff1a; padding:6px 10px; border-radius:999px; width:max-content}
-    .form{
-      padding:28px; display:grid; gap:16px; background:var(--panel);
-    }
-    .row{display:flex; flex-wrap:wrap; gap:10px}
-    .btn{
-      padding:12px 14px; border-radius:12px; border:1px solid var(--line);
-      cursor:pointer; color:#121316; font-weight:900; background:linear-gradient(90deg,#f3bf26,#ffc72c,#a51d14);
-      background-size:200% 100%;
-    }
-    .btn.alt{background:#24262b; color:var(--ink); border-color:#343841}
-    .hint{font-size:12px; color:var(--muted)}
-    .foot{padding:14px 18px; color:#b9bbc5; border-top:1px solid var(--line); background:#191a1e}
-    @media (max-width:900px){ .card{grid-template-columns:1fr} .hero{order:2} .form{order:1} }
+    .login-wrap{min-height:100vh; display:grid; place-items:center; padding:24px; background:#0b0f17}
+    .card{background:#0f1522; border:1px solid #1e2a40; border-radius:18px; box-shadow:0 10px 30px rgba(0,0,0,.25); width:min(520px, 94vw); overflow:hidden; color:#e8eefc}
+    .card header{padding:16px 18px; border-bottom:1px solid #1e2a40; background:linear-gradient(90deg, #DA291C, #B71F15)}
+    .brand{font-weight:900; display:flex; gap:8px; align-items:center; color:#fff}
+    .arch{background:#FFC72C; color:#000; font-size:20px; border-radius:8px; padding:0 9px}
+    .tabs{display:flex; gap:8px; padding:12px 18px 0; border-bottom:1px solid #1e2a40}
+    .tabs button{border:1px solid #1e2a40; background:#0b0f17; color:#cfe0ff; border-radius:999px; padding:8px 14px; cursor:pointer}
+    .tabs button.active{background:#1a2336; border-color:#2b3b59}
+    .body{padding:18px; display:grid; gap:12px}
+    label{font-size:13px; color:#a9b8d6}
+    .input{padding:12px; border-radius:12px; border:1px solid #263552; background:#0b0f17; color:#e8eefc; width:100%}
+    .input:focus{outline:none; border-color:#FFC72C; box-shadow:0 0 0 4px rgba(255,199,44,.15)}
+    .row{display:flex; gap:10px; flex-wrap:wrap}
+    .row > *{flex:1}
+    .actions{display:flex; justify-content:space-between; align-items:center; gap:8px}
+    .btn{cursor:pointer}
+    .send{padding:12px 16px; border-radius:12px; border:0; color:#1a1a1a; font-weight:900; cursor:pointer; background:linear-gradient(90deg,#FFC72C,#FFD964,#DA291C); background-size:200% 100%; animation:btnflow 4s linear infinite; box-shadow:0 6px 16px rgba(218,41,28,.28)}
+    .ghost{border:1px solid #293854; background:#0b0f17; color:#cfe0ff; border-radius:10px; padding:8px 12px}
+    .hint{font-size:12px; color:#8ea1c7}
+    .error{color:#ff7a88; font-size:13px}
+    @keyframes btnflow{0%{background-position:0 0}100%{background-position:200% 0}}
+    .code-wrap{display:none}
   </style>
 </head>
 <body>
-  <div class="wrap">
+  <div id="toasts" class="toasts"></div>
+
+  <div class="login-wrap">
     <div class="card">
-      <section class="hero">
+      <header>
         <div class="brand"><span class="arch">M</span><span>cCrew AI</span></div>
-        <h1>Welcome back</h1>
-        <p>Shift help, store policies, and training — all in one place.</p>
-        <span class="pill">Secure Auth • Auth0 + PKCE</span>
-      </section>
+      </header>
 
-      <section class="form">
-        <div class="row" style="gap:12px">
-          <button id="btnSignIn" class="btn" type="button">Sign in</button>
-          <button id="btnSignUp" class="btn alt" type="button">Create account</button>
-        </div>
-        <div class="hint">Tip: you can sign up with email/password if enabled for your tenant.</div>
-        <div class="hint">You’ll be redirected to <code>/app.html</code> after authentication.</div>
-      </section>
+      <div class="tabs">
+        <button id="tabCrew" class="active" type="button">Crew login</button>
+        <button id="tabManager" type="button">Manager login</button>
+      </div>
 
-      <div class="foot" style="grid-column:1/-1">
-        Powered by Auth0 • McCrew AI
+      <div class="body">
+        <form id="formLogin" autocomplete="on">
+          <div class="row">
+            <div>
+              <label for="email">Email</label>
+              <input id="email" class="input" type="email" placeholder="you@store.local" required />
+            </div>
+          </div>
+          <div class="row">
+            <div>
+              <label for="pass">Password</label>
+              <input id="pass" class="input" type="password" placeholder="••••••••" required />
+            </div>
+          </div>
+
+          <!-- Manager code only when Manager tab active -->
+          <div class="row code-wrap" id="managerCodeWrap">
+            <div>
+              <label for="managerCode">Manager access code</label>
+              <input id="managerCode" class="input" type="password" placeholder="e.g. 321234" inputmode="numeric" />
+            </div>
+          </div>
+
+          <div class="actions">
+            <button id="goSignup" class="ghost btn" type="button">Create account</button>
+            <button class="send btn" type="submit">Sign in</button>
+          </div>
+
+          <p id="err" class="error" hidden></p>
+          <p class="hint">Crew = normal access. Manager = needs the code; server assigns final role.</p>
+        </form>
+      </div>
+
+      <div class="foot-note" style="padding:12px 18px; border-top:1px solid #1e2a40; background:#0b0f17; font-size:12px; color:#8ea1c7">
+        Auth by Auth0. Server-side role via Action claim overrides client choice.
       </div>
     </div>
   </div>
 
-  <!-- Auth0 SDK + NF shim -->
   <script defer src="https://cdn.jsdelivr.net/npm/@auth0/auth0-spa-js@2/dist/auth0-spa-js.production.js"></script>
   <script defer src="./auth-auth0.js"></script>
-  <script>
-    // Minimal login wiring (calls NF.signIn / NF.signUp)
-    function onNFReady(fn){ if (window.NF) fn(); else window.addEventListener("nf-ready", fn, {once:true}); }
-    document.addEventListener("DOMContentLoaded", () => {
-      const signIn = document.getElementById("btnSignIn");
-      const signUp = document.getElementById("btnSignUp");
-      onNFReady(() => {
-        signIn?.addEventListener("click", () => NF.signIn("/app.html"));
-        signUp?.addEventListener("click", () => NF.signUp("/app.html"));
-      });
-    });
-  </script>
+  <script defer src="./login.js"></script>
 </body>
 </html>

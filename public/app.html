@@ -7,34 +7,23 @@
   <link rel="stylesheet" href="./styles.css" />
 </head>
 <body class="theme-dark">
-  <!-- FX canvas (confetti) -->
   <canvas id="fx" class="fx" aria-hidden="true"></canvas>
-
-  <!-- Toasters -->
   <div id="toasts" class="toasts" aria-live="polite"></div>
 
-  <!-- Header -->
   <header class="topbar">
-    <div class="brand">
-      <span class="arch">M</span>
-      <span class="brand-text">cCrew AI</span>
-    </div>
-
+    <div class="brand"><span class="arch">M</span><span class="brand-text">cCrew AI</span></div>
     <nav class="topnav" aria-label="Main">
-      <button id="openAdmin" class="btn ghost">Admin</button>
-      <button id="openAISettings" class="btn ghost">AI Settings</button>
+      <button id="openAdmin" class="btn ghost" style="display:none">Admin</button>
+      <button id="openAISettings" class="btn ghost" style="display:none">AI Settings</button>
       <button id="logout" class="btn ghost" style="display:none">Logout</button>
     </nav>
-
     <div class="profile">
       <img id="userPic" class="avatar" alt="" referrerpolicy="no-referrer" style="display:none" />
       <span id="userName" class="greeting">Hello 👋</span>
     </div>
   </header>
 
-  <!-- Main layout -->
   <main class="layout">
-    <!-- Sidebar -->
     <aside class="panel sidebar" aria-label="Sidebar">
       <section class="card">
         <h2 class="card-title">Your Details</h2>
@@ -53,20 +42,19 @@
       <section class="card">
         <h2 class="card-title">Tips</h2>
         <ul class="tips">
-          <li>Try <code>/shift</code>, <code>/week</code>, <code>/pay</code>, <code>/nextpay</code></li>
+          <li>Use <code>/shift</code>, <code>/week</code>, <code>/pay</code>, <code>/nextpay</code></li>
           <li>Policies: <code>/policy uniform</code></li>
           <li>Training: <code>/quiz start</code></li>
-          <li>Break timer: <code>/break 20</code></li>
+          <li>Break: <code>/break 20</code></li>
           <li>Swap: <code>/swap YYYY-MM-DD HH:MM-HH:MM note…</code></li>
         </ul>
       </section>
     </aside>
 
-    <!-- Chat -->
     <section class="chat card" aria-label="Chat">
       <div id="chatLog" class="chat-log">
         <div class="bot msg">
-          <p>Welcome to <b>McCrew AI</b>. Ask about rules, training, shifts & pay — or the menu.</p>
+          <p>Welcome to <b>McCrew AI</b>. Ask about rules, shifts & pay — or the menu.</p>
           <p>Commands: <code>/help</code>, <code>/shift</code>, <code>/week</code>, <code>/pay</code>, <code>/nextpay</code>, <code>/policy &lt;term&gt;</code>, <code>/quiz start</code>, <code>/break 20</code>, <code>/swap …</code>, <code>/swaps</code>.</p>
         </div>
       </div>
@@ -78,11 +66,9 @@
     </section>
   </main>
 
-  <footer class="foot">
-    <small>Demo only. Replace mock data & KB with your store/company sources.</small>
-  </footer>
+  <footer class="foot"><small>Demo only. Replace mock data & KB with your store/company sources.</small></footer>
 
-  <!-- Admin Panel (dialog) -->
+  <!-- Admin dialog -->
   <dialog id="adminModal" class="modal">
     <form method="dialog" class="admin">
       <header class="admin-head">
@@ -104,27 +90,23 @@
       <section class="admin-sec">
         <h4>Pay Period</h4>
         <div class="row">
-          <label class="field-inline">
-            <span class="label">Frequency</span>
+          <label class="field-inline"><span class="label">Frequency</span>
             <select id="payFreq" class="input">
               <option value="weekly">Weekly</option>
               <option value="biweekly">Bi-weekly</option>
               <option value="monthly">Monthly</option>
             </select>
           </label>
-
-          <label class="field-inline">
-            <span class="label">Next payday</span>
+          <label class="field-inline"><span class="label">Next payday</span>
             <input id="nextPayday" class="input" type="date" />
           </label>
-
           <button id="savePayConfig" type="button" class="btn subtle">Save</button>
         </div>
       </section>
     </form>
   </dialog>
 
-  <!-- AI Settings Modal -->
+  <!-- AI Settings dialog -->
   <dialog id="aiSettingsModal" class="modal">
     <form method="dialog" class="admin">
       <header class="admin-head">
@@ -134,20 +116,20 @@
 
       <section class="admin-sec">
         <h4>Persona (tone & behaviour)</h4>
-        <p class="hint">Keep it short (2–4 sentences). Include boundaries (e.g., “no coding help”).</p>
+        <p class="hint">Keep it short (2–4 sentences). Boundaries (e.g., “no coding help”).</p>
         <textarea id="personaText" class="input" rows="5" placeholder="Persona…"></textarea>
       </section>
 
       <section class="admin-sec">
         <h4>Knowledge (policies, menu blurbs)</h4>
-        <p class="hint">Use concise bullets. Example: Uniform, Breaks, Allergens, Big Mac blurb, etc.</p>
+        <p class="hint">Concise bullets: Uniform, Breaks, Allergens, Big Mac, etc.</p>
         <textarea id="kbText" class="input" rows="10" placeholder="Knowledge base…"></textarea>
       </section>
 
       <section class="admin-sec">
         <h4>Try it</h4>
         <div class="row" style="align-items:flex-start">
-          <input id="testPrompt" class="input" placeholder="Type a test question (e.g., What’s a Big Mac?)" />
+          <input id="testPrompt" class="input" placeholder="e.g., What’s a Big Mac?" />
           <button id="runTest" type="button" class="btn subtle">Ask test</button>
         </div>
         <div id="testResult" class="card" style="margin-top:10px; padding:10px; background:#131a2a; border:1px solid var(--line); border-radius:10px; min-height:44px"></div>
@@ -156,7 +138,7 @@
       <section class="admin-sec">
         <div class="row">
           <button id="saveAISettings" type="button" class="btn send">Save</button>
-          <button id="resetAISettings" type="button" class="btn subtle">Reset to defaults</button>
+          <button id="resetAISettings" type="button" class="btn subtle">Reset</button>
           <span style="flex:1"></span>
           <button id="exportAISettings" type="button" class="btn ghost">Export</button>
           <button id="importAISettings" type="button" class="btn ghost">Import</button>
@@ -166,7 +148,6 @@
     </form>
   </dialog>
 
-  <!-- Scripts: Auth0 SDK → NF shim → App -->
   <script defer src="https://cdn.jsdelivr.net/npm/@auth0/auth0-spa-js@2/dist/auth0-spa-js.production.js"></script>
   <script defer src="./auth-auth0.js"></script>
   <script defer src="./app.js"></script>

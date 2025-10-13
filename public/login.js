@@ -1,97 +1,58 @@
-/* login.js — Netlify Identity (GoTrue) forms via NF.auth (hardened) */
+/* login.js — dual-mode login (Crew or Manager with code) using Auth0 NF shim */
 document.addEventListener("DOMContentLoaded", () => {
-  const $ = (s) => document.querySelector(s);
+  const MANAGER_CODE = "321234"; // change if needed
 
-  const tabIn = $("#tabSignIn");
-  const tabUp = $("#tabSignUp");
-  const formIn = $("#formSignIn");
-  const formUp = $("#formSignUp");
-  const siEmail = $("#siEmail");
-  const siPass  = $("#siPass");
-  const suEmail = $("#suEmail");
-  const suPass  = $("#suPass");
-  const siErr   = $("#siErr");
-  const suErr   = $("#suErr");
-  const remember = $("#remember");
-  const btnIn = formIn?.querySelector('button[type="submit"]');
-  const btnUp = formUp?.querySelector('button[type="submit"]');
+  const $ = (s)=>document.querySelector(s);
+  const tabCrew = $("#tabCrew");
+  const tabMgr  = $("#tabManager");
+  const form    = $("#formLogin");
+  const email   = $("#email");
+  const pass    = $("#pass");
+  const codeWrap= $("#managerCodeWrap");
+  const managerCode = $("#managerCode");
+  const errEl   = $("#err");
+  const goSignup= $("#goSignup");
 
-  // Wait for NF to exist
-  function waitForNF(retries = 60) {
-    return new Promise((resolve, reject) => {
-      const tick = () => {
-        if (window.NF && NF.auth) return resolve();
-        if (retries-- <= 0) return reject(new Error("NF not available"));
-        setTimeout(tick, 50);
-      };
-      tick();
-    });
+  let mode = "crew";
+
+  function switchMode(next){
+    mode = next;
+    tabCrew.classList.toggle("active", mode==="crew");
+    tabMgr.classList.toggle("active", mode==="manager");
+    codeWrap.style.display = mode==="manager" ? "block" : "none";
+    (mode==="manager" ? managerCode : email).focus();
   }
 
-  const params = new URLSearchParams(location.search);
-  const nextRaw = params.get("next") || "app.html";
-  // prevent open-redirects
-  const next = nextRaw.startsWith("http") ? "app.html" : nextRaw.replace(/^\/*/,"");
+  tabCrew.addEventListener("click", ()=>switchMode("crew"));
+  tabMgr.addEventListener("click", ()=>switchMode("manager"));
 
-  function show(which){
-    const signIn = which === "in";
-    tabIn.classList.toggle("active", signIn);
-    tabUp.classList.toggle("active", !signIn);
-    formIn.hidden = !signIn;
-    formUp.hidden = signIn;
-    (signIn ? siEmail : suEmail).focus();
+  const sp = new URLSearchParams(location.search);
+  if (sp.get("role")==="manager") switchMode("manager"); else switchMode("crew");
+
+  function showErr(msg){ errEl.textContent = msg || "Something went wrong."; errEl.hidden = false; }
+
+  async function doLogin(isSignup=false){
+    errEl.hidden = true; errEl.textContent = "";
+    const e = (email.value||"").trim();
+    const p = (pass.value||"").trim();
+    if (!e || !p) return showErr("Please enter email and password.");
+
+    if (mode === "manager"){
+      const entered = (managerCode.value||"").trim();
+      if (entered !== MANAGER_CODE) return showErr("Manager code is incorrect.");
+    }
+
+    try{
+      // Client-side hint; server-side Action will override with real role
+      localStorage.setItem("mccrew_role", mode);
+      if (isSignup) await NF.signUp("/app.html");
+      else await NF.signIn("/app.html");
+    }catch(e){
+      showErr("Login failed. Check SPA settings and callback URLs.");
+      console.error(e);
+    }
   }
-  tabIn.addEventListener("click", ()=>show("in"));
-  tabUp.addEventListener("click", ()=>show("up"));
-  show("in");
 
-  function setBusy(btn, busy) {
-    if (!btn) return;
-    btn.disabled = !!busy;
-    btn.style.opacity = busy ? .6 : 1;
-  }
-
-  waitForNF().then(() => {
-    formIn.addEventListener("submit", async (e)=>{
-      e.preventDefault();
-      siErr.hidden = true; siErr.textContent = "";
-      setBusy(btnIn, true);
-      try{
-        await NF.auth.login(siEmail.value.trim(), siPass.value, !!remember.checked);
-        location.replace(next);
-      }catch(err){
-        siErr.textContent = (err && err.message) ? err.message : "Sign in failed. Check email/password or Identity settings.";
-        siErr.hidden = false;
-        siPass.classList.add("shake"); setTimeout(()=>siPass.classList.remove("shake"), 380);
-      }finally{
-        setBusy(btnIn, false);
-      }
-    });
-
-    formUp.addEventListener("submit", async (e)=>{
-      e.preventDefault();
-      suErr.hidden = true; suErr.textContent = "";
-      setBusy(btnUp, true);
-      try{
-        await NF.auth.signup(suEmail.value.trim(), suPass.value);
-        try{
-          await NF.auth.login(suEmail.value.trim(), suPass.value, true);
-          location.replace("app.html");
-        }catch(e2){
-          suErr.textContent = "Account created. Please verify your email, then sign in.";
-          suErr.hidden = false;
-          show("in");
-        }
-      }catch(err){
-        suErr.textContent = (err && err.message) ? err.message : "Could not create account (maybe email already registered?).";
-        suErr.hidden = false;
-        suPass.classList.add("shake"); setTimeout(()=>suPass.classList.remove("shake"), 380);
-      }finally{
-        setBusy(btnUp, false);
-      }
-    });
-  }).catch((e)=>{
-    console.error(e);
-    if (siErr){ siErr.hidden = false; siErr.textContent = "Auth library failed to load. Check script order."; }
-  });
+  form.addEventListener("submit", (ev)=>{ ev.preventDefault(); doLogin(false); });
+  goSignup.addEventListener("click", ()=> doLogin(true));
 });

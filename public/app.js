@@ -1,13 +1,26 @@
-/* McCrew AI — app.js (dark UI)
+/* McCrew AI — app.js (dark UI, role-aware, server-claim enforced)
    - Auth0 greeting + avatar (no refresh needed)
-   - Personalizable AI (persona + KB + context)
-   - Topic guard: only McDonald's ops + menu + small talk (refuse coding/off-topic)
+   - Role gating: Crew (hide Admin/AI Settings) vs Manager (show + allow)
+   - Personalizable AI (persona + KB + context) + AI Settings modal
+   - Topic guard: McDonald's ops + menu + small talk (refuse coding/off-topic)
    - Admin demo data (employees, pay config, swaps)
-   - AI Settings modal (edit/test/export/import)
    - Subtle confetti (no toggle)
 */
-
 (() => {
+  /* ---------- Role helpers ---------- */
+  function getRole(){
+    const r = localStorage.getItem("mccrew_role");
+    return (r === "manager") ? "manager" : "crew";
+  }
+  function applyRoleUI(){
+    const role = getRole();
+    const adminBtn = document.getElementById("openAdmin");
+    const aiBtn    = document.getElementById("openAISettings");
+    const show = role === "manager";
+    if (adminBtn) adminBtn.style.display = show ? "inline-block" : "none";
+    if (aiBtn)    aiBtn.style.display    = show ? "inline-block" : "none";
+  }
+
   /* ---------- Auth greeting (no refresh needed) ---------- */
   async function setupHeaderFromAuth() {
     try{
@@ -28,9 +41,9 @@
   }
 
   document.addEventListener("DOMContentLoaded", async () => {
-    // If NF not ready yet, we’ll run again on nf-ready
     setupHeaderFromAuth();
-    respondText("Ready. Ask me about shifts, pay, policies, or menu — or use /help.");
+    applyRoleUI();
+    respondText("Ready. Ask about shifts, pay, policies, or menu — or use /help.");
 
     // Restore saved Emp ID
     try{
@@ -42,8 +55,7 @@
       });
     }catch{}
   });
-  // When NF shim finishes, update header (fixes mobile timing)
-  window.addEventListener("nf-ready", setupHeaderFromAuth);
+  window.addEventListener("nf-ready", () => { setupHeaderFromAuth(); applyRoleUI(); });
 
   /* ---------- Demo Data ---------- */
   const store = {
@@ -61,7 +73,7 @@
     swaps: []
   };
 
-  /* ---------- Knowledge Base (UI + AI KB seed) ---------- */
+  /* ---------- KB (UI topics) ---------- */
   const KB = [
     { topic:"Uniform Policy", keywords:["uniform","dress","appearance"], answer:
       `• Clean full uniform, name badge visible.
@@ -137,8 +149,8 @@
   const kbList  = document.getElementById("kbList");
   const empIdInput = document.getElementById("empId");
 
-  const openAdminBtn = document.getElementById("openAdmin");
   const adminModal = document.getElementById("adminModal");
+  const openAdminBtn = document.getElementById("openAdmin");
   const closeAdminBtn = document.getElementById("closeAdmin");
   const aEmpId = document.getElementById("aEmpId");
   const aName  = document.getElementById("aName");
@@ -164,8 +176,14 @@
     });
   }
 
-  /* ---------- Admin modal ---------- */
-  addEvt(openAdminBtn,"click", ()=>{ adminModal?.showModal?.(); renderEmpTable(); initPayConfigFields(); });
+  /* ---------- Admin modal (manager-only) ---------- */
+  addEvt(openAdminBtn,"click", (e)=>{
+    if (getRole() !== "manager"){
+      e.preventDefault();
+      return respondText("Manager access only. If you are a manager, log out and sign in using the Manager tab with the code.");
+    }
+    adminModal?.showModal?.(); renderEmpTable(); initPayConfigFields();
+  });
   addEvt(closeAdminBtn,"click", ()=> adminModal?.close?.());
   addEvt(adminModal,"cancel", (e)=>{ e.preventDefault(); adminModal.close(); });
   addEvt(adminModal,"click", (e)=>{
@@ -238,7 +256,7 @@
     pushUser(raw);
     const low = text.toLowerCase();
 
-    // Quiz answers (if active and not a command)
+    // Quiz answers
     if (quiz && quiz.active && !low.startsWith("/")){
       const pick = text.trim()[0]?.toLowerCase();
       const idx = "abc123".indexOf(pick);
@@ -270,7 +288,7 @@
     if (low.startsWith("/swap"))   return handleSwap(text);
     if (low.startsWith("/swaps"))  return listSwaps();
 
-    // ---------- Local topic guard (instant) ----------
+    // Topic guard
     const coding = /\b(html|css|javascript|js|typescript|python|react|node|express|sql|database|db|api|debug|compile|code|snippet|write.*code|build.*website|script|program)\b/i;
     const casual = /\b(hi|hello|hey|yo|how are (you|u)|thanks|thank you|bye|goodbye|see ya|what'?s up|sup)\b/i;
     const mcd = /(mcdonald|mccrew|crew|store|shift|rota|schedule|week|pay|payday|paycheck|overtime|break|uniform|policy|rules|allergen|allergens|food safety|handwash|fryer|drive-?thru|manager|training|quiz|swap|swaps|clock|timeclock|hold time|station|menu|item|ingredients?|nutrition|calorie|calories|price|sauce|bun|patty|cheese|pickle|ketchup|mustard|lettuce|onion|sesame|burger|fries|nuggets?|mcflurry|big\s*mac|mcchicken|filet[-\s]?o[-\s]?fish|double\s*cheeseburger|quarter\s*pounder)/i;
@@ -281,13 +299,12 @@
     if (!casual.test(low) && !mcd.test(low)) {
       return respondText("I’m here for McDonald’s crew topics: shifts, rota, pay, breaks, policies, training, food safety, and menu questions. Try one of those. 😊");
     }
-    // ---------- End topic guard ----------
 
     // Quick KB match
     const match = bestKB(low);
     if (match) return respondHTML(`<p><b>${match.topic}</b></p><p>${escapeHTML(match.answer).replace(/\n/g,"<br>")}</p>`);
 
-    // AI call with persona/KB/context
+    // AI call
     const reply = await askAI(text);
     if (!maybeHandleAction(reply)) respondText(reply);
   }
@@ -349,7 +366,7 @@
     respondHTML(`<p><b>Estimated Pay for Today</b></p>
       <p>${emp.name}: £${est.toFixed(2)} (rate £${emp.hourlyRate.toFixed(2)}/hr, ${hours.toFixed(2)} hrs)</p>
       <small>Demo estimate only; actual pay depends on timeclock, premiums, breaks, taxes, etc.</small>`);
-    toast("Pay estimated","good"); confetti(900);
+    confetti(900);
   }
 
   function handleNextPay(){
@@ -364,7 +381,7 @@
     respondHTML(`<p><b>Next Paycheck</b></p>
       <p>Next payday: <b>${next}</b> • Frequency: <b>${frequency}</b></p>
       <p>Following payday: ${after}</p>`);
-    toast("Next payday shown","good"); confetti(900);
+    confetti(900);
   }
 
   function handlePolicy(raw){
@@ -381,7 +398,6 @@
       quiz = { idx:0, score:0, active:true };
       respondText("Starting 5-question training quiz. Answer with A/B/C (or 1/2/3). Type /quit to exit.");
       setTimeout(askQuizQuestion, 200);
-      toast("Quiz started");
     } else respondText("Use: /quiz start");
   }
   function askQuizQuestion(){
@@ -412,7 +428,7 @@
     const parts = raw.split(" ").filter(Boolean);
     if (parts.length < 3) return respondText("Usage: /swap YYYY-MM-DD HH:MM-HH:MM Note…");
     store.swaps.push({ id: Math.random().toString(36).slice(2), date:parts[1], range:parts[2], note:parts.slice(3).join(" ")||"(no note)", createdISO:new Date().toISOString() });
-    persist(); toast("Swap request posted","good");
+    persist();
     respondHTML(`<p><b>Swap request posted</b></p><p>${parts[1]} • ${parts[2]}<br>${escapeHTML(parts.slice(3).join(" ")||"(no note)")}</p>`);
   }
   function listSwaps(){
@@ -443,7 +459,6 @@ Big Mac
     return localStorage.getItem("mccrew_persona") || DEFAULT_PERSONA_UI;
   }
   function buildKB(){
-    // Prefer admin-edited KB; else seed from UI defaults + inline KB array
     const edited = localStorage.getItem("mccrew_kb");
     if (edited) return edited;
     const seeded = DEFAULT_KB_UI;
@@ -480,16 +495,12 @@ Big Mac
     }
   }
 
-  // If the model suggests a JSON action, run it.
   function maybeHandleAction(answer){
     const m = answer.match(/JSON:\s*({[\s\S]*})/i);
     if (!m) return false;
     try {
       const obj = JSON.parse(m[1]);
-      if (obj.action && typeof obj.action === "string") {
-        handleInput(obj.action); // call back into the router
-        return true;
-      }
+      if (obj.action && typeof obj.action === "string") { handleInput(obj.action); return true; }
     } catch {}
     return false;
   }
@@ -544,9 +555,9 @@ Big Mac
     rafId = requestAnimationFrame(tick);
   }
 
-  /* ---------- AI Settings wiring ---------- */
-  const openAISettingsBtn  = document.getElementById("openAISettings");
+  /* ---------- AI Settings wiring (manager-only open) ---------- */
   const aiSettingsModal    = document.getElementById("aiSettingsModal");
+  const openAISettingsBtn  = document.getElementById("openAISettings");
   const closeAISettingsBtn = document.getElementById("closeAISettings");
   const personaText        = document.getElementById("personaText");
   const kbText             = document.getElementById("kbText");
@@ -560,6 +571,9 @@ Big Mac
   const testResultBox      = document.getElementById("testResult");
 
   addEvt(openAISettingsBtn, "click", ()=>{
+    if (getRole() !== "manager"){
+      return respondText("Manager access only. If you are a manager, log out and sign in using the Manager tab with the code.");
+    }
     if (!aiSettingsModal?.showModal) return;
     personaText.value = localStorage.getItem("mccrew_persona") || DEFAULT_PERSONA_UI;
     kbText.value      = localStorage.getItem("mccrew_kb") || DEFAULT_KB_UI;

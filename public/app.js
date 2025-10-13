@@ -504,21 +504,37 @@
   });
 
   /* -------------------------- AI Function Hook -------------------------- */
-  async function askAI(message){
-    try{
-      const res = await fetch("/.netlify/functions/ask", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question: message })
-      });
-      const data = await res.json();
-      if (data.answer) return data.answer;
-      return "Hmm, not sure right now. Try again in a moment.";
-    }catch(e){
-      console.error("[AI]", e);
-      return "AI connection failed. Please try again later.";
+ async function askAI(message){
+  try{
+    const res = await fetch("/.netlify/functions/ask", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ question: message })
+      // For one test, you can add debug: true to see raw shape: { question: message, debug: true }
+    });
+
+    const text = await res.text();
+    let data = {};
+    try { data = text ? JSON.parse(text) : {}; } catch {}
+
+    if (!res.ok) {
+      const msg = data.error || `AI endpoint error (${res.status})`;
+      console.warn("[AI]", msg, data.detail || text);
+      return `AI connection failed: ${msg}`;
     }
+
+    if (data.error) {
+      console.warn("[AI] server reported error", data.error, data.detail);
+      return `AI issue: ${data.error}`;
+    }
+
+    return data.answer || "I couldn’t fetch a reply just now. Please ask again.";
+  }catch(e){
+    console.error("[AI]", e);
+    return "AI connection failed. Please try again later.";
   }
+}
+
 
   /* ------------------------------ Bootstrap ----------------------------- */
   document.addEventListener("DOMContentLoaded", () => {

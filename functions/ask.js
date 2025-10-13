@@ -1,55 +1,66 @@
-// functions/ask.js — zero-dep OpenAI call
+// functions/ask.js — OpenAI via native fetch + robust errors + debug echo
 export async function handler(event) {
   try {
     if (event.httpMethod !== "POST") {
       return { statusCode: 405, body: "Method Not Allowed" };
     }
 
-    const { question } = JSON.parse(event.body || "{}");
-    if (!question || typeof question !== "string") {
-      return { statusCode: 400, body: "Bad Request: missing 'question' string" };
-    }
-
     const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) {
-      return { statusCode: 500, body: JSON.stringify({ error: "Server not configured" }) };
+      console.error("Missing OPENAI_API_KEY env var");
+      return { statusCode: 500, body: JSON.stringify({ error: "Server not configured: no OPENAI_API_KEY" }) };
     }
 
-    const system = "You are McCrew AI, a helpful McDonald's crew assistant for UK stores. Be concise (2–4 sentences), professional, and pragmatic.";
-    const user = `Question: ${question}`;
+    const body = JSON.parse(event.body || "{}");
+    const question = (body.question || "").trim();
+
+    if (!question) {
+      return { statusCode: 400, body: JSON.stringify({ error: "Missing 'question' string" }) };
+    }
+
+    // Quick debug mode: send {"question":"...", "debug":true} to see raw shape
+    const debug = !!body.debug;
+
+    // Compose prompt
+    const system = "You are McCrew AI, a helpful McDonald's crew assistant for UK stores. Be concise (2–4 sentences), friendly, and practical.";
+    const messages = [
+      { role: "system", content: system },
+      { role: "user", content: question }
+    ];
 
     const resp = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
-      headers: {
-        "Authorization": `Bearer ${apiKey}`,
-        "Content-Type": "application/json"
-      },
+      headers: { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         model: "gpt-4o-mini",
-        messages: [
-          { role: "system", content: system },
-          { role: "user", content: user }
-        ],
+        messages,
         temperature: 0.4,
         max_tokens: 220
       })
     });
 
+    const text = await resp.text(); // read raw for better logging
+    let data;
+    try { data = JSON.parse(text); } catch { data = null; }
+
     if (!resp.ok) {
-      const errText = await resp.text().catch(() => "");
-      console.error("OpenAI HTTP", resp.status, errText);
-      return { statusCode: 502, body: JSON.stringify({ error: "AI upstream error" }) };
+      console.error("OpenAI error", resp.status, text);
+      return { statusCode: 502, body: JSON.stringify({ error: `AI upstream ${resp.status}`, detail: data || text }) };
     }
 
-    const data = await resp.json();
-    const answer = data?.choices?.[0]?.message?.content?.trim() || "Sorry, I couldn't find an answer.";
+    const answer = data?.choices?.[0]?.message?.content?.trim();
+    if (!answer) {
+      console.error("No answer in OpenAI response", data);
+      return { statusCode: 200, body: JSON.stringify({ answer: "I couldn’t fetch a reply just now. Please ask again." }) };
+    }
+
     return {
       statusCode: 200,
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ answer })
+      body: JSON.stringify(debug ? { answer, raw: data } : { answer })
     };
   } catch (e) {
     console.error("Function error", e);
-    return { statusCode: 500, body: JSON.stringify({ error: "AI unavailable" }) };
+    return { statusCode: 500, body: JSON.stringify({ error: "AI unavailable", detail: String(e && e.message || e) }) };
   }
 }
